@@ -39,3 +39,11 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# raw art dump -- not read by the app; images are served from Sanity's CDN
+/public/images/
+
+# Claude Code local tooling (installed skills, agent config) -- not app source
+.agents/
+.claude/
+skills-lock.json

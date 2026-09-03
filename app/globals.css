@@ -1,26 +1,74 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --color-parchment: #ede6d6;
+  --color-ink: #1c1a17;
+  --color-powder-blue: #a9c4d4;
+  --color-lilac: #c7b8d6;
+  --color-blush: #e3b8b0;
+  --color-brass: #b08d57;
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-parchment: var(--color-parchment);
+  --color-ink: var(--color-ink);
+  --color-powder-blue: var(--color-powder-blue);
+  --color-lilac: var(--color-lilac);
+  --color-blush: var(--color-blush);
+  --color-brass: var(--color-brass);
+
+  --font-calligraphy: var(--font-ma-shan-zheng);
+  --font-serif-display: var(--font-fraunces);
+  --font-sans: var(--font-inter);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+@media (prefers-reduced-motion: no-preference) {
+  .transition-underline {
+    transition: opacity 150ms ease, transform 150ms ease;
   }
 }
 
+html {
+  background: var(--color-parchment);
+}
+
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--color-parchment);
+  color: var(--color-ink);
+}
+
+::selection {
+  background: var(--color-powder-blue);
+  color: var(--color-ink);
+}
+
+:focus-visible {
+  outline: 2px solid var(--color-ink);
+  outline-offset: 3px;
+}
+
+.hairline {
+  border-color: rgb(28 26 23 / 0.15);
+}
+
+.hand-underline {
+  position: relative;
+}
+
+.hand-underline::after {
+  content: "";
+  position: absolute;
+  left: -2%;
+  right: -2%;
+  bottom: -0.35em;
+  height: 6px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 8' preserveAspectRatio='none'%3E%3Cpath d='M1 5.5C20 2 35 7 50 4.5C65 2 80 6.5 99 3' fill='none' stroke='%231C1A17' stroke-width='1.6' stroke-linecap='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-size: 100% 100%;
+}
+
+.stamp-seal {
+  border: 2px solid rgb(28 26 23 / 0.55);
+  border-radius: 9999px;
+  color: rgb(28 26 23 / 0.55);
 }

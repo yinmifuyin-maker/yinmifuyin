@@ -3,19 +3,22 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
+    "dev": "next dev --webpack",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "upload-video": "tsx scripts/upload-video.ts"
   },
   "dependencies": {
     "@portabletext/react": "^8.0.1",
     "@sanity/image-url": "^2.1.1",
+    "@vercel/blob": "^2.8.0",
     "jose": "^6.2.10",
     "next": "16.3.3",
     "next-sanity": "^13.3.4",
     "react": "19.2.8",
-    "react-dom": "19.2.8"
+    "react-dom": "19.2.8",
+    "stripe": "^22.6.0"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
@@ -25,6 +28,7 @@
     "eslint": "^9",
     "eslint-config-next": "16.3.3",
     "tailwindcss": "^4",
+    "tsx": "^4.23.13",
     "typescript": "^5"
   }
 }
