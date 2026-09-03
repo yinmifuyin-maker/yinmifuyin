@@ -25,10 +25,23 @@ function Side({
   side: "left" | "right";
   reducedMotion: boolean;
 }) {
-  const first = pickRandom(pool);
-  const [slots, setSlots] = useState<[ConceptArtImage, ConceptArtImage]>([first, pickRandom(pool, first)]);
+  // Both slots start on the same, deterministic first pool item so server and client
+  // render identical markup on the first pass -- Math.random() must never run during SSR,
+  // or hydration will mismatch on the <Image src>. The real random starting pair is picked
+  // client-side after mount instead, in the effect below.
+  const [slots, setSlots] = useState<[ConceptArtImage, ConceptArtImage]>([pool[0], pool[0]]);
   const [active, setActive] = useState<0 | 1>(0);
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const pickedInitialRef = useRef(false);
+
+  useEffect(() => {
+    if (pickedInitialRef.current) return;
+    pickedInitialRef.current = true;
+    const first = pickRandom(pool);
+    const second = pickRandom(pool, first);
+    setSlots([first, second]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => {
     if (reducedMotion || pool.length < 2) return;
@@ -83,6 +96,9 @@ export default function HomeBackgroundArt({ images }: { images: ConceptArtImage[
 
   useEffect(() => {
     const mq = window.matchMedia("(prefers-reduced-motion: reduce)");
+    // matchMedia only exists client-side, so the true initial value can only be read here,
+    // after mount -- one corrective render is unavoidable for this kind of media-query check.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setReducedMotion(mq.matches);
     const handler = (e: MediaQueryListEvent) => setReducedMotion(e.matches);
     mq.addEventListener("change", handler);
