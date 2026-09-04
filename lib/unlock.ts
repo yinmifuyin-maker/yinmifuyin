@@ -1,6 +1,7 @@
 import { SignJWT, jwtVerify } from "jose";
+import { cookies } from "next/headers";
 
-export type UnlockScope = "episode" | "gallery";
+export type UnlockScope = "episode" | "gallery" | "character";
 
 function getSecretKey() {
   const secret = process.env.JWT_SECRET;
@@ -11,7 +12,9 @@ function getSecretKey() {
 }
 
 export function unlockCookieName(scope: UnlockScope, subjectId: string) {
-  return scope === "gallery" ? `unlock_gallery_${subjectId}` : `unlock_${subjectId}`;
+  if (scope === "gallery") return `unlock_gallery_${subjectId}`;
+  if (scope === "character") return `unlock_character_${subjectId}`;
+  return `unlock_${subjectId}`;
 }
 
 export async function signUnlockToken(
@@ -36,4 +39,11 @@ export async function verifyUnlockToken(
   } catch {
     return false;
   }
+}
+
+/** Server-component-side unlock check, reading the cookie directly via next/headers. */
+export async function isUnlocked(scope: UnlockScope, subjectId: string): Promise<boolean> {
+  const store = await cookies();
+  const token = store.get(unlockCookieName(scope, subjectId))?.value;
+  return token ? verifyUnlockToken(token, scope, subjectId) : false;
 }

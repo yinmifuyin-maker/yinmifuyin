@@ -6,7 +6,7 @@ export default function AccessCodeForm({
   scope,
   subjectId,
 }: {
-  scope: "episode" | "gallery";
+  scope: "episode" | "gallery" | "character";
   subjectId: string;
 }) {
   const [open, setOpen] = useState(false);
@@ -19,7 +19,7 @@ export default function AccessCodeForm({
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="mt-2 text-xs underline underline-offset-2 opacity-60 hover:opacity-100"
+        className="mt-1.5 text-[11px] tracking-wide underline underline-offset-2 opacity-50 hover:opacity-80"
       >
         Have an access code?
       </button>
@@ -53,7 +53,7 @@ export default function AccessCodeForm({
   }
 
   return (
-    <form onSubmit={handleSubmit} className="mt-2 flex flex-col items-start gap-2">
+    <form onSubmit={handleSubmit} className="mt-1.5 flex flex-col items-start gap-2">
       <div className="flex items-center gap-2">
         <input
           type="text"

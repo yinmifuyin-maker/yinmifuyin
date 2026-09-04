@@ -2,8 +2,11 @@ import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getCharacterById, getCharacters, getPrimaryArtwork } from "@/lib/content";
+import { isUnlocked } from "@/lib/unlock";
+import { isFreeCharacter } from "@/lib/characterAccess";
 import ColorSwatch from "@/components/ColorSwatch";
 import ArtComingSoon from "@/components/ArtComingSoon";
+import CharacterUnlockCta from "@/components/CharacterUnlockCta";
 
 export async function generateStaticParams() {
   const characters = await getCharacters();
@@ -20,6 +23,8 @@ export default async function CharacterPage(
     notFound();
   }
 
+  const unlocked = isFreeCharacter(character.id) || (await isUnlocked("character", character.id));
+
   const primary = getPrimaryArtwork(character);
   const moreArtworks = character.artworks.filter((a) => a !== primary);
 
@@ -31,8 +36,10 @@ export default async function CharacterPage(
 
       <div className="mt-8 grid gap-10 sm:grid-cols-[280px_1fr]">
         <div>
-          <div className="hairline overflow-hidden border bg-white/40">
-            {primary ? (
+          <div className="hairline relative overflow-hidden border bg-white/40">
+            {!primary ? (
+              <ArtComingSoon className="aspect-square w-full" />
+            ) : unlocked ? (
               <Image
                 src={primary.imageUrl}
                 alt={character.name}
@@ -41,10 +48,23 @@ export default async function CharacterPage(
                 className="aspect-square w-full object-cover"
               />
             ) : (
-              <ArtComingSoon className="aspect-square w-full" />
+              <>
+                <Image
+                  src={primary.imageUrl}
+                  alt={character.name}
+                  width={560}
+                  height={560}
+                  className="aspect-square w-full scale-110 object-cover grayscale blur-sm"
+                />
+                <div className="pointer-events-none absolute inset-0 flex items-center justify-center bg-ink/25">
+                  <span className="inline-flex items-center justify-center rounded-full border-2 border-brass bg-parchment/90 px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.15em] text-ink">
+                    Locked
+                  </span>
+                </div>
+              </>
             )}
           </div>
-          {primary && (
+          {primary && unlocked && (
             <p className="mt-2 text-xs opacity-60">
               Art by{" "}
               <Link
@@ -80,10 +100,22 @@ export default async function CharacterPage(
               )}
             </div>
           )}
+
+          {primary && !unlocked && (
+            <div className="mt-6">
+              <p className="text-sm leading-relaxed opacity-90">
+                {character.name}&rsquo;s artwork is available to supporters. Unlock it to view
+                the full piece{moreArtworks.length > 0 ? " and additional art" : ""}.
+              </p>
+              <div className="mt-4">
+                <CharacterUnlockCta characterId={character.id} />
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
-      {moreArtworks.length > 0 && (
+      {unlocked && moreArtworks.length > 0 && (
         <div className="mt-14">
           <div className="hairline border-t" />
           <h2 className="mt-10 text-sm uppercase tracking-widest opacity-60">More Art</h2>

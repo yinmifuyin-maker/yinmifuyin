@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { signUnlockToken, unlockCookieName, type UnlockScope } from "@/lib/unlock";
 
 function isScope(value: unknown): value is UnlockScope {
-  return value === "episode" || value === "gallery";
+  return value === "episode" || value === "gallery" || value === "character";
 }
 
 export async function POST(request: Request) {
