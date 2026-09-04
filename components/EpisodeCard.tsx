@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import { episodeHasAvailableContent, type Episode } from "@/lib/content";
+import ComingSoon from "./ComingSoon";
 
 export default function EpisodeCard({
   episode,
@@ -25,13 +26,7 @@ export default function EpisodeCard({
           }`}
         />
 
-        {!hasContent && (
-          <div className="pointer-events-none absolute inset-0 flex items-center justify-center bg-ink/10">
-            <span className="stamp-seal -rotate-12 bg-parchment/80 px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em]">
-              Coming Soon
-            </span>
-          </div>
-        )}
+        {!hasContent && <ComingSoon variant="card" />}
 
         {hasContent && (
           <>

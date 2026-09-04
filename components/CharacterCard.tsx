@@ -1,7 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { getPrimaryArtwork, type Character } from "@/lib/content";
-import ArtComingSoon from "./ArtComingSoon";
+import ComingSoon from "./ComingSoon";
 
 export default function CharacterCard({
   character,
@@ -31,7 +31,7 @@ export default function CharacterCard({
             }`}
           />
         ) : (
-          <ArtComingSoon className="aspect-square w-full" />
+          <ComingSoon variant="box" label="Art Coming Soon" className="aspect-square w-full" />
         )}
 
         {primary && !unlocked && (

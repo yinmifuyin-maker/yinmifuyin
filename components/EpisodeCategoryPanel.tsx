@@ -7,6 +7,7 @@ import EpisodeCategoryContent from "./EpisodeCategoryContent";
 import EpisodePlayer from "./EpisodePlayer";
 import AccessDisclaimer from "./AccessDisclaimer";
 import AccessCodeForm from "./AccessCodeForm";
+import ComingSoon from "./ComingSoon";
 
 export default function EpisodeCategoryPanel({ episode }: { episode: Episode }) {
   const hasPaidAvailable = EPISODE_CATEGORIES.some(
@@ -45,7 +46,7 @@ export default function EpisodeCategoryPanel({ episode }: { episode: Episode }) 
           const categoryUnlocked = cat.free || unlocked === true;
           const isOpen = expandedKey === cat.key;
 
-          let rightLabel = "Coming Soon";
+          let rightLabel = "";
           if (available) {
             if (!statusKnown) rightLabel = "…";
             else if (categoryUnlocked) rightLabel = isOpen ? "Hide" : cat.free ? "Free — View" : "View";
@@ -74,15 +75,19 @@ export default function EpisodeCategoryPanel({ episode }: { episode: Episode }) 
                 <span className="font-[family-name:var(--font-serif-display)] text-lg">
                   {cat.label}
                 </span>
-                <span
-                  className={
-                    available && statusKnown && !categoryUnlocked
-                      ? "rounded-full border-2 border-brass px-3 py-1 text-xs font-medium uppercase tracking-widest text-ink"
-                      : "text-xs uppercase tracking-widest opacity-60"
-                  }
-                >
-                  {rightLabel}
-                </span>
+                {!available ? (
+                  <ComingSoon variant="row" />
+                ) : (
+                  <span
+                    className={
+                      statusKnown && !categoryUnlocked
+                        ? "rounded-full border-2 border-brass px-3 py-1 text-xs font-medium uppercase tracking-widest text-ink"
+                        : "text-xs uppercase tracking-widest opacity-60"
+                    }
+                  >
+                    {rightLabel}
+                  </span>
+                )}
               </button>
 
               {available && isOpen && categoryUnlocked && (
