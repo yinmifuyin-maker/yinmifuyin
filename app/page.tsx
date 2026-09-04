@@ -3,6 +3,7 @@ import { getSeries, getConceptArtPool } from "@/lib/content";
 import { getLocale, pick } from "@/lib/locale";
 import PortableProse from "@/components/PortableProse";
 import HomeBackgroundArt from "@/components/HomeBackgroundArt";
+import HeroTitle from "@/components/HeroTitle";
 
 export default async function Home() {
   const [series, pool, locale] = await Promise.all([
@@ -18,12 +19,7 @@ export default async function Home() {
       <HomeBackgroundArt images={pool} />
 
       <section className="relative mx-auto flex max-w-3xl flex-col items-center gap-6 px-6 py-20 text-center sm:py-28">
-        <h1 className="font-[family-name:var(--font-calligraphy)] text-6xl leading-none sm:text-8xl">
-          {series?.titleZh}
-        </h1>
-        <p className="font-[family-name:var(--font-serif-display)] text-2xl sm:text-3xl">
-          {series?.title}
-        </p>
+        <HeroTitle titleZh={series?.titleZh} title={series?.title} />
         <p className="text-sm tracking-wide opacity-70">
           Yǐnmì Fúyīn · {series?.tagline}
         </p>
