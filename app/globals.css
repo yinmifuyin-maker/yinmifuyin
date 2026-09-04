@@ -26,6 +26,25 @@
   .transition-underline {
     transition: opacity 150ms ease, transform 150ms ease;
   }
+
+  .bg-drift {
+    animation: bg-drift 42s ease-in-out infinite;
+  }
+}
+
+@keyframes bg-drift {
+  0%,
+  100% {
+    transform: scale(1.15) translateX(-3%);
+  }
+  50% {
+    transform: scale(1.15) translateX(3%);
+  }
+}
+
+.bg-edge-fade {
+  mask-image: radial-gradient(ellipse 62% 55% at center, black 30%, transparent 78%);
+  -webkit-mask-image: radial-gradient(ellipse 62% 55% at center, black 30%, transparent 78%);
 }
 
 html {
