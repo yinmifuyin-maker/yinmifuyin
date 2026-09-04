@@ -2,10 +2,9 @@ import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getCharacterById, getCharacters, getPrimaryArtwork } from "@/lib/content";
-import { isUnlocked } from "@/lib/unlock";
-import { isFreeCharacter } from "@/lib/characterAccess";
+import { isArtworkUnlocked } from "@/lib/artworkAccess";
 import ColorSwatch from "@/components/ColorSwatch";
-import ArtComingSoon from "@/components/ArtComingSoon";
+import ComingSoon from "@/components/ComingSoon";
 import CharacterUnlockCta from "@/components/CharacterUnlockCta";
 
 export async function generateStaticParams() {
@@ -23,10 +22,30 @@ export default async function CharacterPage(
     notFound();
   }
 
-  const unlocked = isFreeCharacter(character.id) || (await isUnlocked("character", character.id));
-
   const primary = getPrimaryArtwork(character);
   const moreArtworks = character.artworks.filter((a) => a !== primary);
+
+  const primaryUnlocked = primary
+    ? await isArtworkUnlocked({
+        characterId: character.id,
+        artistId: primary.artistId,
+        isFreeSample: primary.isFreeSample,
+      })
+    : false;
+
+  const moreArtworksWithStatus = await Promise.all(
+    moreArtworks.map(async (artwork) => ({
+      artwork,
+      unlocked: await isArtworkUnlocked({
+        characterId: character.id,
+        artistId: artwork.artistId,
+        isFreeSample: artwork.isFreeSample,
+      }),
+    }))
+  );
+
+  const anyLocked =
+    (!!primary && !primaryUnlocked) || moreArtworksWithStatus.some((a) => !a.unlocked);
 
   return (
     <div className="mx-auto max-w-3xl px-6 py-16">
@@ -38,8 +57,8 @@ export default async function CharacterPage(
         <div>
           <div className="hairline relative overflow-hidden border bg-white/40">
             {!primary ? (
-              <ArtComingSoon className="aspect-square w-full" />
-            ) : unlocked ? (
+              <ComingSoon variant="box" label="Art Coming Soon" className="aspect-square w-full" />
+            ) : primaryUnlocked ? (
               <Image
                 src={primary.imageUrl}
                 alt={character.name}
@@ -64,7 +83,7 @@ export default async function CharacterPage(
               </>
             )}
           </div>
-          {primary && unlocked && (
+          {primary && primaryUnlocked && (
             <p className="mt-2 text-xs opacity-60">
               Art by{" "}
               <Link
@@ -101,7 +120,7 @@ export default async function CharacterPage(
             </div>
           )}
 
-          {primary && !unlocked && (
+          {anyLocked && (
             <div className="mt-6">
               <p className="text-sm leading-relaxed opacity-90">
                 {character.name}&rsquo;s artwork is available to supporters. Unlock it to view
@@ -115,31 +134,42 @@ export default async function CharacterPage(
         </div>
       </div>
 
-      {unlocked && moreArtworks.length > 0 && (
+      {moreArtworksWithStatus.length > 0 && (
         <div className="mt-14">
           <div className="hairline border-t" />
           <h2 className="mt-10 text-sm uppercase tracking-widest opacity-60">More Art</h2>
           <div className="mt-6 grid grid-cols-2 gap-6 sm:grid-cols-3">
-            {moreArtworks.map((artwork, i) => (
+            {moreArtworksWithStatus.map(({ artwork, unlocked }, i) => (
               <div key={i} className="flex flex-col gap-2">
-                <div className="hairline overflow-hidden border bg-white/40">
+                <div className="hairline relative overflow-hidden border bg-white/40">
                   <Image
                     src={artwork.imageUrl}
                     alt={character.name}
                     width={400}
                     height={400}
-                    className="aspect-square w-full object-cover"
+                    className={`aspect-square w-full object-cover ${
+                      unlocked ? "" : "scale-110 grayscale blur-sm"
+                    }`}
                   />
+                  {!unlocked && (
+                    <div className="pointer-events-none absolute inset-0 flex items-center justify-center bg-ink/25">
+                      <span className="inline-flex items-center justify-center rounded-full border-2 border-brass bg-parchment/90 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.15em] text-ink">
+                        Locked
+                      </span>
+                    </div>
+                  )}
                 </div>
-                <p className="text-xs opacity-60">
-                  Art by{" "}
-                  <Link
-                    href={`/artists/${artwork.artistId}`}
-                    className="hand-underline font-medium opacity-100"
-                  >
-                    {artwork.artistName}
-                  </Link>
-                </p>
+                {unlocked && (
+                  <p className="text-xs opacity-60">
+                    Art by{" "}
+                    <Link
+                      href={`/artists/${artwork.artistId}`}
+                      className="hand-underline font-medium opacity-100"
+                    >
+                      {artwork.artistName}
+                    </Link>
+                  </p>
+                )}
               </div>
             ))}
           </div>

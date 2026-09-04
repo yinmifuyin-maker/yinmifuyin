@@ -1,6 +1,5 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useGalleryCheckout } from "@/hooks/useGalleryCheckout";
@@ -12,6 +11,7 @@ export interface PortfolioItem {
   characterName: string;
   imageUrl: string;
   isFreeSample?: boolean;
+  unlocked: boolean;
 }
 
 export default function ArtistPortfolio({
@@ -21,37 +21,19 @@ export default function ArtistPortfolio({
   artistId: string;
   items: PortfolioItem[];
 }) {
-  const [unlocked, setUnlocked] = useState<boolean | null>(null);
   const { loading, error, startCheckout } = useGalleryCheckout(artistId);
-
-  useEffect(() => {
-    let cancelled = false;
-
-    fetch(`/api/gallery-status/${artistId}`)
-      .then((res) => res.json())
-      .then((data: { unlocked: boolean }) => {
-        if (!cancelled) setUnlocked(data.unlocked);
-      })
-      .catch(() => {
-        if (!cancelled) setUnlocked(false);
-      });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [artistId]);
 
   if (items.length === 0) {
     return <p className="mt-4 text-sm opacity-70">No credited work yet.</p>;
   }
 
+  const anyLocked = items.some((item) => !item.unlocked);
+
   return (
     <div>
       <div className="mt-6 grid grid-cols-2 gap-6 sm:grid-cols-3">
         {items.map((item) => {
-          const isLocked = !item.isFreeSample && unlocked !== true;
-
-          if (!isLocked) {
+          if (item.unlocked) {
             return (
               <Link
                 key={item.key}
@@ -101,9 +83,7 @@ export default function ArtistPortfolio({
         })}
       </div>
       {error && <p className="mt-3 text-sm opacity-70">{error}</p>}
-      {unlocked === false && (
-        <AccessCodeForm scope="gallery" subjectId={artistId} />
-      )}
+      {anyLocked && <AccessCodeForm scope="gallery" subjectId={artistId} />}
     </div>
   );
 }

@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
-import { getCharactersByGroup, type Character } from "@/lib/content";
-import { isUnlocked } from "@/lib/unlock";
-import { isFreeCharacter } from "@/lib/characterAccess";
+import { getCharactersByGroup, getPrimaryArtwork, type Character } from "@/lib/content";
+import { isArtworkUnlocked } from "@/lib/artworkAccess";
 import CharacterCard from "@/components/CharacterCard";
 
 export const metadata: Metadata = {
@@ -10,10 +9,17 @@ export const metadata: Metadata = {
 
 async function withUnlockStatus(characters: Character[]) {
   return Promise.all(
-    characters.map(async (character) => ({
-      character,
-      unlocked: isFreeCharacter(character.id) || (await isUnlocked("character", character.id)),
-    }))
+    characters.map(async (character) => {
+      const primary = getPrimaryArtwork(character);
+      const unlocked = primary
+        ? await isArtworkUnlocked({
+            characterId: character.id,
+            artistId: primary.artistId,
+            isFreeSample: primary.isFreeSample,
+          })
+        : true;
+      return { character, unlocked };
+    })
   );
 }
 

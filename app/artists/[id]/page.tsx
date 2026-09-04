@@ -5,6 +5,7 @@ import {
   getArtists,
   getCharactersByArtist,
 } from "@/lib/content";
+import { isArtworkUnlocked } from "@/lib/artworkAccess";
 import ArtistPortfolio from "@/components/ArtistPortfolio";
 
 export async function generateStaticParams() {
@@ -33,6 +34,17 @@ export default async function ArtistPage(props: PageProps<"/artists/[id]">) {
       }))
   );
 
+  const portfolioWithStatus = await Promise.all(
+    portfolio.map(async (item) => ({
+      ...item,
+      unlocked: await isArtworkUnlocked({
+        characterId: item.characterId,
+        artistId: artist.id,
+        isFreeSample: item.isFreeSample,
+      }),
+    }))
+  );
+
   return (
     <div className="mx-auto max-w-4xl px-6 py-16">
       <Link href="/artists" className="text-sm opacity-70 hover:opacity-100">
@@ -54,9 +66,9 @@ export default async function ArtistPage(props: PageProps<"/artists/[id]">) {
       <h2 className="text-sm uppercase tracking-widest opacity-60">Portfolio</h2>
       <p className="mt-2 max-w-xl text-sm opacity-70">
         A couple of pieces are free to browse — the rest unlock with a single gallery
-        donation.
+        donation, or by unlocking that character&rsquo;s artwork directly.
       </p>
-      <ArtistPortfolio artistId={artist.id} items={portfolio} />
+      <ArtistPortfolio artistId={artist.id} items={portfolioWithStatus} />
     </div>
   );
 }
