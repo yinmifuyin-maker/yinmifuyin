@@ -8,7 +8,9 @@ export { LOCALE_COOKIE };
 
 export async function getLocale(): Promise<Locale> {
   const store = await cookies();
-  return store.get(LOCALE_COOKIE)?.value === "zh" ? "zh" : "en";
+  // Default to Mandarin for first-time visitors (no cookie yet). Once someone
+  // has explicitly chosen English via the toggle, that choice always wins.
+  return store.get(LOCALE_COOKIE)?.value === "en" ? "en" : "zh";
 }
 
 /** Pick the localized value, falling back to English when no Chinese version exists yet. */
