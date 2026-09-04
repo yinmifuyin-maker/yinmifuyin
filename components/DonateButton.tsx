@@ -1,16 +1,21 @@
-const FALLBACK_HREF = "#";
+"use client";
+
+import { useState } from "react";
+import DonateModal from "./DonateModal";
 
 export default function DonateButton({ className = "" }: { className?: string }) {
-  const href = process.env.STRIPE_DONATE_LINK || FALLBACK_HREF;
+  const [open, setOpen] = useState(false);
 
   return (
-    <a
-      href={href}
-      target="_blank"
-      rel="noopener noreferrer"
-      className={`inline-flex items-center justify-center rounded-full border-2 border-brass px-5 py-2 text-sm font-medium tracking-wide text-ink transition-colors hover:bg-brass/10 ${className}`}
-    >
-      Support the Project
-    </a>
+    <>
+      <button
+        type="button"
+        onClick={() => setOpen(true)}
+        className={`inline-flex items-center justify-center rounded-full border-2 border-brass px-5 py-2 text-sm font-medium tracking-wide text-ink transition-colors hover:bg-brass/10 ${className}`}
+      >
+        Support the Project
+      </button>
+      {open && <DonateModal onClose={() => setOpen(false)} />}
+    </>
   );
 }
