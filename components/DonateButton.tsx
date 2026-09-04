@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import DonateModal from "./DonateModal";
+import UnlockModal from "./UnlockModal";
 
 export default function DonateButton({ className = "" }: { className?: string }) {
   const [open, setOpen] = useState(false);
@@ -15,7 +15,7 @@ export default function DonateButton({ className = "" }: { className?: string })
       >
         Support the Project
       </button>
-      {open && <DonateModal onClose={() => setOpen(false)} />}
+      {open && <UnlockModal target={{ type: "donate" }} onClose={() => setOpen(false)} />}
     </>
   );
 }

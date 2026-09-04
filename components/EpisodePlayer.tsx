@@ -9,7 +9,13 @@ type PlayerState =
   | { status: "locked" }
   | { status: "error" };
 
-export default function EpisodePlayer({ episodeId }: { episodeId: string }) {
+export default function EpisodePlayer({
+  episodeId,
+  episodeTitle,
+}: {
+  episodeId: string;
+  episodeTitle: string;
+}) {
   const [state, setState] = useState<PlayerState>({ status: "loading" });
 
   useEffect(() => {
@@ -62,7 +68,7 @@ export default function EpisodePlayer({ episodeId }: { episodeId: string }) {
           This episode is available to supporters. Unlock it to watch the full episode.
         </p>
         <div className="mt-4">
-          <UnlockButton episodeId={episodeId} />
+          <UnlockButton episodeId={episodeId} episodeTitle={episodeTitle} />
         </div>
       </div>
     );

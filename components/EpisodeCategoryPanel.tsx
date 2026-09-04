@@ -2,11 +2,10 @@
 
 import { useEffect, useState } from "react";
 import { EPISODE_CATEGORIES, type Episode } from "@/lib/content";
-import { useCheckout } from "@/hooks/useCheckout";
 import EpisodeCategoryContent from "./EpisodeCategoryContent";
 import EpisodePlayer from "./EpisodePlayer";
 import AccessDisclaimer from "./AccessDisclaimer";
-import AccessCodeForm from "./AccessCodeForm";
+import UnlockModal from "./UnlockModal";
 import ComingSoon from "./ComingSoon";
 
 export default function EpisodeCategoryPanel({ episode }: { episode: Episode }) {
@@ -16,7 +15,7 @@ export default function EpisodeCategoryPanel({ episode }: { episode: Episode }) 
 
   const [unlocked, setUnlocked] = useState<boolean | null>(hasPaidAvailable ? null : true);
   const [expandedKey, setExpandedKey] = useState<string | null>(null);
-  const { loading, error, startCheckout } = useCheckout(episode.id);
+  const [modalCategory, setModalCategory] = useState<string | null>(null);
 
   useEffect(() => {
     if (!hasPaidAvailable) return;
@@ -50,13 +49,13 @@ export default function EpisodeCategoryPanel({ episode }: { episode: Episode }) 
           if (available) {
             if (!statusKnown) rightLabel = "…";
             else if (categoryUnlocked) rightLabel = isOpen ? "Hide" : cat.free ? "Free — View" : "View";
-            else rightLabel = loading ? "Redirecting…" : "Donate to Unlock";
+            else rightLabel = "Donate to Unlock";
           }
 
           function handleClick() {
             if (!available || !statusKnown) return;
             if (!categoryUnlocked) {
-              startCheckout();
+              setModalCategory(cat.label);
               return;
             }
             setExpandedKey(isOpen ? null : cat.key);
@@ -93,7 +92,7 @@ export default function EpisodeCategoryPanel({ episode }: { episode: Episode }) 
               {available && isOpen && categoryUnlocked && (
                 <div className="mt-4">
                   {cat.key === "fullEpisode" ? (
-                    <EpisodePlayer episodeId={episode.id} />
+                    <EpisodePlayer episodeId={episode.id} episodeTitle={episode.title} />
                   ) : (
                     <EpisodeCategoryContent episodeId={episode.id} category={cat.key} />
                   )}
@@ -104,11 +103,19 @@ export default function EpisodeCategoryPanel({ episode }: { episode: Episode }) 
         })}
       </div>
 
-      {error && <p className="mt-3 text-sm opacity-70">{error}</p>}
-      {hasPaidAvailable && unlocked === false && (
-        <AccessCodeForm scope="episode" subjectId={episode.id} />
-      )}
       {hasPaidAvailable && <AccessDisclaimer />}
+
+      {modalCategory && (
+        <UnlockModal
+          target={{
+            type: "episode",
+            episodeId: episode.id,
+            episodeTitle: episode.title,
+            category: modalCategory,
+          }}
+          onClose={() => setModalCategory(null)}
+        />
+      )}
     </div>
   );
 }

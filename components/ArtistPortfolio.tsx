@@ -2,8 +2,8 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useGalleryCheckout } from "@/hooks/useGalleryCheckout";
-import AccessCodeForm from "./AccessCodeForm";
+import { useState } from "react";
+import UnlockModal from "./UnlockModal";
 
 export interface PortfolioItem {
   key: string;
@@ -16,18 +16,18 @@ export interface PortfolioItem {
 
 export default function ArtistPortfolio({
   artistId,
+  artistName,
   items,
 }: {
   artistId: string;
+  artistName: string;
   items: PortfolioItem[];
 }) {
-  const { loading, error, startCheckout } = useGalleryCheckout(artistId);
+  const [open, setOpen] = useState(false);
 
   if (items.length === 0) {
     return <p className="mt-4 text-sm opacity-70">No credited work yet.</p>;
   }
-
-  const anyLocked = items.some((item) => !item.unlocked);
 
   return (
     <div>
@@ -66,15 +66,14 @@ export default function ArtistPortfolio({
                 />
                 <div className="pointer-events-none absolute inset-0 flex items-center justify-center bg-ink/25 transition-colors duration-300 group-hover:bg-ink/35">
                   <span className="inline-flex items-center justify-center rounded-full border-2 border-brass bg-parchment/90 px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.15em] text-ink transition-all duration-300 motion-safe:group-hover:-translate-y-0.5 motion-safe:group-hover:scale-110 motion-safe:group-hover:shadow-[0_0_18px_4px_rgba(176,141,87,0.5)]">
-                    {loading ? "Redirecting…" : "Donate to Unlock"}
+                    Donate to Unlock
                   </span>
                 </div>
                 <button
                   type="button"
-                  onClick={startCheckout}
-                  disabled={loading}
+                  onClick={() => setOpen(true)}
                   aria-label={`Donate to unlock ${item.characterName} artwork`}
-                  className="absolute inset-0 z-10 cursor-pointer disabled:cursor-wait"
+                  className="absolute inset-0 z-10 cursor-pointer"
                 />
               </div>
               <p className="text-sm font-medium opacity-50">{item.characterName}</p>
@@ -82,8 +81,12 @@ export default function ArtistPortfolio({
           );
         })}
       </div>
-      {error && <p className="mt-3 text-sm opacity-70">{error}</p>}
-      {anyLocked && <AccessCodeForm scope="gallery" subjectId={artistId} />}
+      {open && (
+        <UnlockModal
+          target={{ type: "gallery", artistId, artistName }}
+          onClose={() => setOpen(false)}
+        />
+      )}
     </div>
   );
 }

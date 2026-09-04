@@ -68,7 +68,7 @@ export default async function ArtistPage(props: PageProps<"/artists/[id]">) {
         A couple of pieces are free to browse — the rest unlock with a single gallery
         donation, or by unlocking that character&rsquo;s artwork directly.
       </p>
-      <ArtistPortfolio artistId={artist.id} items={portfolioWithStatus} />
+      <ArtistPortfolio artistId={artist.id} artistName={artist.name} items={portfolioWithStatus} />
     </div>
   );
 }

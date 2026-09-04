@@ -127,7 +127,7 @@ export default async function CharacterPage(
                 the full piece{moreArtworks.length > 0 ? " and additional art" : ""}.
               </p>
               <div className="mt-4">
-                <CharacterUnlockCta characterId={character.id} />
+                <CharacterUnlockCta characterId={character.id} characterName={character.name} />
               </div>
             </div>
           )}
