@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Ma_Shan_Zheng, Fraunces, Inter } from "next/font/google";
+import { Ma_Shan_Zheng, Fraunces, Inter, Noto_Serif_SC } from "next/font/google";
 import Nav from "@/components/Nav";
 import Footer from "@/components/Footer";
 import { getLocale } from "@/lib/locale";
@@ -25,6 +25,16 @@ const inter = Inter({
   display: "swap",
 });
 
+// Paired with Fraunces for reading text (see --font-serif-display in globals.css):
+// Fraunces has no CJK glyphs, so Chinese characters fall through to this font
+// rather than an undesigned OS default.
+const notoSerifSC = Noto_Serif_SC({
+  variable: "--font-noto-serif-sc",
+  weight: ["400", "600"],
+  subsets: ["latin"],
+  display: "swap",
+});
+
 export const metadata: Metadata = {
   title: "隐秘福音 · The Hidden Gospel",
   description:
@@ -37,7 +47,7 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html
       lang={locale}
-      className={`${maShanZheng.variable} ${fraunces.variable} ${inter.variable}`}
+      className={`${maShanZheng.variable} ${fraunces.variable} ${inter.variable} ${notoSerifSC.variable}`}
     >
       <body className="flex min-h-full flex-col bg-parchment font-sans text-ink">
         <div aria-hidden className="fixed inset-x-0 top-0 z-50 h-2.5 bg-ink sm:h-3" />

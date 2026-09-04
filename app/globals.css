@@ -18,7 +18,7 @@
   --color-brass: var(--color-brass);
 
   --font-calligraphy: var(--font-ma-shan-zheng);
-  --font-serif-display: var(--font-fraunces);
+  --font-serif-display: var(--font-fraunces), var(--font-noto-serif-sc);
   --font-sans: var(--font-inter);
 }
 
