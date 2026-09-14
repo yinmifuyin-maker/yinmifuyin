@@ -28,6 +28,10 @@ export async function GET(request: Request) {
     return NextResponse.redirect(new URL(`/artists/${artistId}`, url.origin));
   }
 
+  if (session.metadata?.scope !== "gallery" || session.metadata?.subjectId !== artistId) {
+    return NextResponse.json({ error: "This payment does not match the requested gallery" }, { status: 403 });
+  }
+
   const token = await signUnlockToken("gallery", artistId);
   const response = NextResponse.redirect(new URL(`/artists/${artistId}`, url.origin));
 

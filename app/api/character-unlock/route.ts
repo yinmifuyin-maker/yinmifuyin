@@ -28,6 +28,10 @@ export async function GET(request: Request) {
     return NextResponse.redirect(new URL(`/characters/${characterId}`, url.origin));
   }
 
+  if (session.metadata?.scope !== "character" || session.metadata?.subjectId !== characterId) {
+    return NextResponse.json({ error: "This payment does not match the requested character" }, { status: 403 });
+  }
+
   const token = await signUnlockToken("character", characterId);
   const response = NextResponse.redirect(new URL(`/characters/${characterId}`, url.origin));
 

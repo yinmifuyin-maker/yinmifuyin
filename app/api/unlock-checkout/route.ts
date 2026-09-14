@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import Stripe from "stripe";
 import { getEpisodeById, getCharacterById, getArtistById } from "@/lib/content";
 import { isFreeCharacter } from "@/lib/characterAccess";
-import { minAmountFor, type UnlockTarget } from "@/lib/unlockTarget";
+import { minAmountFor, unlockScopeFor, type UnlockTarget } from "@/lib/unlockTarget";
 
 const MAX_AMOUNT_USD = 10_000;
 
@@ -82,6 +82,7 @@ export async function POST(request: Request) {
 
   const stripe = new Stripe(secretKey);
   const origin = new URL(request.url).origin;
+  const scope = unlockScopeFor(target);
 
   const session = await stripe.checkout.sessions.create({
     mode: "payment",
@@ -97,6 +98,7 @@ export async function POST(request: Request) {
     ],
     success_url: `${origin}${successPath}`,
     cancel_url: `${origin}${cancelPath}`,
+    metadata: scope ? { scope: scope.scope, subjectId: scope.subjectId } : undefined,
   });
 
   return NextResponse.json({ url: session.url });

@@ -28,6 +28,10 @@ export async function GET(request: Request) {
     return NextResponse.redirect(new URL(`/episodes/${episodeId}`, url.origin));
   }
 
+  if (session.metadata?.scope !== "episode" || session.metadata?.subjectId !== episodeId) {
+    return NextResponse.json({ error: "This payment does not match the requested episode" }, { status: 403 });
+  }
+
   const token = await signUnlockToken("episode", episodeId);
   const response = NextResponse.redirect(new URL(`/episodes/${episodeId}`, url.origin));
 
