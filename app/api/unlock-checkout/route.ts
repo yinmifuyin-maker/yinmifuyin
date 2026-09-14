@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import Stripe from "stripe";
-import { getEpisodeById, getCharacterById, getArtistById } from "@/lib/content";
+import { getEpisodeById, getCharacterById, getArtistById, getPrimaryArtwork } from "@/lib/content";
 import { isFreeCharacter } from "@/lib/characterAccess";
 import { minAmountFor, unlockScopeFor, type UnlockTarget } from "@/lib/unlockTarget";
 
@@ -21,6 +21,7 @@ export async function POST(request: Request) {
   let productName: string;
   let successPath: string;
   let cancelPath: string;
+  let attribution: { artistId: string; artistName: string; subjectName: string } | undefined;
 
   if (target.type === "donate") {
     productName = "Donation to The Hidden Gospel";
@@ -48,6 +49,14 @@ export async function POST(request: Request) {
     productName = `Unlock ${character.name} artwork`;
     successPath = `/api/character-unlock?session_id={CHECKOUT_SESSION_ID}&characterId=${target.characterId}`;
     cancelPath = `/characters/${target.characterId}`;
+    const primaryArtwork = getPrimaryArtwork(character);
+    if (primaryArtwork) {
+      attribution = {
+        artistId: primaryArtwork.artistId,
+        artistName: primaryArtwork.artistName,
+        subjectName: character.name,
+      };
+    }
   } else if (target.type === "gallery") {
     const artist = await getArtistById(target.artistId);
     if (!artist) {
@@ -56,6 +65,7 @@ export async function POST(request: Request) {
     productName = `Unlock ${artist.name} gallery`;
     successPath = `/api/gallery-unlock?session_id={CHECKOUT_SESSION_ID}&artistId=${target.artistId}`;
     cancelPath = `/artists/${target.artistId}`;
+    attribution = { artistId: artist.id, artistName: artist.name, subjectName: artist.name };
   } else {
     return NextResponse.json({ error: "Invalid target" }, { status: 400 });
   }
@@ -98,7 +108,9 @@ export async function POST(request: Request) {
     ],
     success_url: `${origin}${successPath}`,
     cancel_url: `${origin}${cancelPath}`,
-    metadata: scope ? { scope: scope.scope, subjectId: scope.subjectId } : undefined,
+    metadata: scope
+      ? { scope: scope.scope, subjectId: scope.subjectId, ...attribution }
+      : undefined,
   });
 
   return NextResponse.json({ url: session.url });
