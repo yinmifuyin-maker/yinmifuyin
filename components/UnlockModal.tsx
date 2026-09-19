@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useState } from "react";
 import {
   minAmountFor,
@@ -215,7 +216,13 @@ export default function UnlockModal({
           {payError && <p className="mt-3 text-sm opacity-70">{payError}</p>}
 
           <p className="mt-4 text-xs opacity-60">
-            Donations are processed securely through Stripe.
+            Donations are processed securely through Stripe.{" "}
+            <Link
+              href="/use-of-proceeds"
+              className="underline underline-offset-2 opacity-90 hover:opacity-100"
+            >
+              See how funds are used
+            </Link>
           </p>
         </div>
       </div>

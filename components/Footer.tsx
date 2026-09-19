@@ -1,4 +1,5 @@
 import Image from "next/image";
+import Link from "next/link";
 import type { Locale } from "@/lib/locale";
 import { pick } from "@/lib/locale";
 import type { Series } from "@/lib/content";
@@ -37,6 +38,15 @@ export default function Footer({ series, locale }: { series: Series | undefined;
           >
             yinmifuyin@gmail.com
           </a>
+        </p>
+
+        <p className="text-xs opacity-70">
+          <Link
+            href="/use-of-proceeds"
+            className="underline underline-offset-2 opacity-90 hover:opacity-100"
+          >
+            See how donations are used
+          </Link>
         </p>
 
         <p className="text-xs opacity-60">

@@ -11,6 +11,9 @@ export type {
   Artist,
   TeamMember,
   ConceptArtImage,
+  UseOfProceeds,
+  UseOfProceedsPhaseWithGoal,
+  UseOfProceedsPhaseWithStatus,
 } from "./sanity/queries";
 
 export {
@@ -28,4 +31,5 @@ export {
   episodeHasAvailableContent,
   getTeamMembers,
   getConceptArtPool,
+  getUseOfProceeds,
 } from "./sanity/queries";

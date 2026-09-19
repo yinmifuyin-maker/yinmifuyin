@@ -13,6 +13,7 @@ const TAGS = {
   episode: ["episode"],
   artist: ["artist"],
   teamMember: ["teamMember"],
+  useOfProceeds: ["useOfProceeds"],
 } as const;
 
 function fetchTagged<T>(query: string, tags: readonly string[], params: Record<string, unknown> = {}) {
@@ -328,6 +329,52 @@ export interface ConceptArtImage {
 
 interface RawArtworkImage {
   asset?: { _ref: string };
+}
+
+// ---------------------------------------------------------------------------
+// Use of Proceeds
+// ---------------------------------------------------------------------------
+
+export interface UseOfProceedsPhaseWithGoal {
+  title: string;
+  goalAmountUSD?: number;
+  goalDisclaimer?: string;
+  description?: string;
+}
+
+export interface UseOfProceedsPhaseWithStatus {
+  title: string;
+  goalStatus?: string;
+  description?: string;
+}
+
+export interface UseOfProceeds {
+  title: string;
+  lastUpdatedNote?: string;
+  intro?: string;
+  transparencyNote?: string;
+  splitExplanation?: string;
+  phase1?: UseOfProceedsPhaseWithGoal;
+  phase2?: UseOfProceedsPhaseWithStatus;
+  phase3?: UseOfProceedsPhaseWithStatus;
+  episodeUnlockNote?: string;
+}
+
+const USE_OF_PROCEEDS_QUERY = /* groq */ `*[_type == "useOfProceeds"][0]{
+  title,
+  lastUpdatedNote,
+  intro,
+  transparencyNote,
+  splitExplanation,
+  phase1,
+  phase2,
+  phase3,
+  episodeUnlockNote
+}`;
+
+export async function getUseOfProceeds(): Promise<UseOfProceeds | undefined> {
+  const doc = await fetchTagged<UseOfProceeds | null>(USE_OF_PROCEEDS_QUERY, TAGS.useOfProceeds);
+  return doc ?? undefined;
 }
 
 export async function getConceptArtPool(): Promise<ConceptArtImage[]> {
