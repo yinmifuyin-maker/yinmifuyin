@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { getSeries } from "@/lib/content";
 import DonateButton from "@/components/DonateButton";
 import PortableProse from "@/components/PortableProse";
@@ -23,6 +24,15 @@ export default async function SupportPage() {
       {series?.openingQuote && (
         <PortableProse value={series.openingQuote} className="mt-4 opacity-90" />
       )}
+
+      <div className="mt-8">
+        <Link
+          href="/use-of-proceeds"
+          className="inline-flex items-center justify-center rounded-full border-2 border-brass px-5 py-2 text-sm font-medium tracking-wide text-ink transition-colors hover:bg-brass/10"
+        >
+          See exactly how your support is used
+        </Link>
+      </div>
 
       <p className="mt-6 text-sm opacity-70">
         Have a question before donating?{" "}
