@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { getUseOfProceeds } from "@/lib/content";
+import { getRaisedTotalUSD } from "@/lib/raisedTotal";
 import type { UseOfProceedsPhaseWithGoal, UseOfProceedsPhaseWithStatus } from "@/lib/content";
 
 export const metadata: Metadata = {
@@ -12,7 +13,13 @@ const usd = new Intl.NumberFormat("en-US", {
   maximumFractionDigits: 0,
 });
 
-function PhaseWithGoal({ phase }: { phase: UseOfProceedsPhaseWithGoal }) {
+function PhaseWithGoal({
+  phase,
+  raisedUSD,
+}: {
+  phase: UseOfProceedsPhaseWithGoal;
+  raisedUSD?: number;
+}) {
   return (
     <section>
       <h2 className="font-[family-name:var(--font-serif-display)] text-2xl">{phase.title}</h2>
@@ -20,6 +27,11 @@ function PhaseWithGoal({ phase }: { phase: UseOfProceedsPhaseWithGoal }) {
       {typeof phase.goalAmountUSD === "number" && (
         <p className="mt-3 text-xl font-medium tracking-wide text-brass">
           {usd.format(phase.goalAmountUSD)}
+        </p>
+      )}
+      {typeof raisedUSD === "number" && (
+        <p className="mt-1 text-sm font-medium tracking-wide opacity-80">
+          {usd.format(Math.floor(raisedUSD))} raised so far
         </p>
       )}
       {phase.goalDisclaimer && (
@@ -52,7 +64,7 @@ function PhaseWithStatus({ phase }: { phase: UseOfProceedsPhaseWithStatus }) {
 }
 
 export default async function UseOfProceedsPage() {
-  const data = await getUseOfProceeds();
+  const [data, raisedUSD] = await Promise.all([getUseOfProceeds(), getRaisedTotalUSD()]);
 
   if (!data) {
     return (
@@ -89,7 +101,7 @@ export default async function UseOfProceedsPage() {
       <div className="mt-14 space-y-14">
         {data.phase1 && (
           <>
-            <PhaseWithGoal phase={data.phase1} />
+            <PhaseWithGoal phase={data.phase1} raisedUSD={raisedUSD} />
             <div className="hairline border-t" />
           </>
         )}
