@@ -1,10 +1,8 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
-import { issueSignedToken, presignUrl } from "@vercel/blob";
 import { getEpisodeById } from "@/lib/content";
 import { unlockCookieName, verifyUnlockToken } from "@/lib/unlock";
-
-const SIGNED_URL_TTL_MS = 8 * 60 * 1000;
+import { presignVideoUrl } from "@/lib/videoAccess";
 
 export async function GET(
   request: NextRequest,
@@ -28,17 +26,5 @@ export async function GET(
     );
   }
 
-  const signedToken = await issueSignedToken({
-    pathname: videoPath,
-    operations: ["get"],
-    validUntil: Date.now() + SIGNED_URL_TTL_MS,
-  });
-
-  const { presignedUrl } = await presignUrl(signedToken, {
-    operation: "get",
-    pathname: videoPath,
-    access: "private",
-  });
-
-  return NextResponse.json({ url: presignedUrl });
+  return NextResponse.json({ url: await presignVideoUrl(videoPath) });
 }

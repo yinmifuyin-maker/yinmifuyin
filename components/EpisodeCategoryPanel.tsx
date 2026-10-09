@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { EPISODE_CATEGORIES, type Episode } from "@/lib/content";
 import EpisodeCategoryContent from "./EpisodeCategoryContent";
 import EpisodePlayer from "./EpisodePlayer";
+import GatedVideo from "./GatedVideo";
 import AccessDisclaimer from "./AccessDisclaimer";
 import UnlockModal from "./UnlockModal";
 import ComingSoon from "./ComingSoon";
@@ -43,18 +44,24 @@ export default function EpisodeCategoryPanel({ episode }: { episode: Episode }) 
           const available = !!entry?.available;
           const statusKnown = cat.free || unlocked !== null;
           const categoryUnlocked = cat.free || unlocked === true;
+          // A storyboard video with a preview clip opens for everyone; the player
+          // itself asks non-supporters to donate once the preview ends.
+          const previewOnly =
+            !categoryUnlocked && cat.key === "storyboard" && !!episode.content.storyboard?.previewPath;
+          const canOpen = categoryUnlocked || previewOnly;
           const isOpen = expandedKey === cat.key;
 
           let rightLabel = "";
           if (available) {
             if (!statusKnown) rightLabel = "…";
             else if (categoryUnlocked) rightLabel = isOpen ? "Hide" : cat.free ? "Free — View" : "View";
+            else if (previewOnly) rightLabel = isOpen ? "Hide" : "Free Preview";
             else rightLabel = "Donate to Unlock";
           }
 
           function handleClick() {
             if (!available || !statusKnown) return;
-            if (!categoryUnlocked) {
+            if (!canOpen) {
               setModalCategory(cat.label);
               return;
             }
@@ -79,7 +86,7 @@ export default function EpisodeCategoryPanel({ episode }: { episode: Episode }) 
                 ) : (
                   <span
                     className={
-                      statusKnown && !categoryUnlocked
+                      statusKnown && !canOpen
                         ? "rounded-full border-2 border-brass px-3 py-1 text-xs font-medium uppercase tracking-widest text-ink"
                         : "text-xs uppercase tracking-widest opacity-60"
                     }
@@ -89,10 +96,20 @@ export default function EpisodeCategoryPanel({ episode }: { episode: Episode }) 
                 )}
               </button>
 
-              {available && isOpen && categoryUnlocked && (
+              {available && isOpen && canOpen && (
                 <div className="mt-4">
                   {cat.key === "fullEpisode" ? (
                     <EpisodePlayer episodeId={episode.id} episodeTitle={episode.title} />
+                  ) : cat.key === "storyboard" ? (
+                    <GatedVideo
+                      endpoint={`/api/storyboard-video/${episode.id}`}
+                      unlockTarget={{
+                        type: "episode",
+                        episodeId: episode.id,
+                        episodeTitle: episode.title,
+                        category: cat.label,
+                      }}
+                    />
                   ) : (
                     <EpisodeCategoryContent episodeId={episode.id} category={cat.key} />
                   )}

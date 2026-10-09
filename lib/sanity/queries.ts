@@ -51,6 +51,13 @@ export async function getSeries(): Promise<Series | undefined> {
 // Artists
 // ---------------------------------------------------------------------------
 
+/** A sketch video on an artist's page. Blob paths stay server-side (see getSketchVideoPaths). */
+export interface SketchVideo {
+  key: string; // the array item's _key, which the upload script sets
+  title: string;
+  hasPreview: boolean;
+}
+
 export interface Artist {
   id: string; // slug
   name: string;
@@ -59,8 +66,10 @@ export interface Artist {
   location?: string;
   bio: string;
   galleryPriceId?: string;
+  sketchVideos: SketchVideo[];
 }
 
+// Only sketches switched on in Studio, with a title and an uploaded video, reach the site.
 const ARTIST_PROJECTION = /* groq */ `{
   "id": slug.current,
   name,
@@ -68,7 +77,15 @@ const ARTIST_PROJECTION = /* groq */ `{
   studio,
   location,
   bio,
-  galleryPriceId
+  galleryPriceId,
+  "sketchVideos": coalesce(
+    sketchVideos[available == true && defined(title) && defined(videoPath)]{
+      "key": _key,
+      title,
+      "hasPreview": defined(previewPath)
+    },
+    []
+  )
 }`;
 
 export async function getArtists(): Promise<Artist[]> {
@@ -80,6 +97,20 @@ export async function getArtistById(id: string): Promise<Artist | undefined> {
     `*[_type == "artist" && slug.current == $id][0] ${ARTIST_PROJECTION}`,
     TAGS.artist,
     { id }
+  );
+  return doc ?? undefined;
+}
+
+export async function getSketchVideoPaths(
+  artistId: string,
+  sketchKey: string
+): Promise<{ videoPath: string; previewPath?: string } | undefined> {
+  const doc = await fetchTagged<{ videoPath: string; previewPath?: string } | null>(
+    `*[_type == "artist" && slug.current == $artistId][0].sketchVideos[
+      _key == $sketchKey && available == true && defined(title) && defined(videoPath)
+    ][0]{ videoPath, previewPath }`,
+    TAGS.artist,
+    { artistId, sketchKey }
   );
   return doc ?? undefined;
 }
@@ -217,7 +248,7 @@ export interface EpisodeContent {
   synopsis?: EpisodeContentEntry;
   sneakPeek?: EpisodeContentEntry;
   fullScript?: EpisodeContentEntry;
-  storyboard?: { available: boolean };
+  storyboard?: { available: boolean; videoPath?: string; previewPath?: string };
   fullEpisode?: { available: boolean; videoPath?: string };
 }
 
