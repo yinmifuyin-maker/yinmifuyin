@@ -7,6 +7,7 @@ import {
 } from "@/lib/content";
 import { isArtworkUnlocked } from "@/lib/artworkAccess";
 import ArtistPortfolio from "@/components/ArtistPortfolio";
+import ArtistSketches from "@/components/ArtistSketches";
 
 export async function generateStaticParams() {
   const artists = await getArtists();
@@ -69,6 +70,22 @@ export default async function ArtistPage(props: PageProps<"/artists/[id]">) {
         donation, or by unlocking that character&rsquo;s artwork directly.
       </p>
       <ArtistPortfolio artistId={artist.id} artistName={artist.name} items={portfolioWithStatus} />
+
+      {artist.sketchVideos.length > 0 && (
+        <>
+          <div className="hairline my-12 border-t" />
+
+          <h2 className="text-sm uppercase tracking-widest opacity-60">Sketches</h2>
+          <p className="mt-2 max-w-xl text-sm opacity-70">
+            The full sketch videos unlock with the same gallery donation as the portfolio.
+          </p>
+          <ArtistSketches
+            artistId={artist.id}
+            artistName={artist.name}
+            sketches={artist.sketchVideos}
+          />
+        </>
+      )}
     </div>
   );
 }
