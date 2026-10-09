@@ -1,18 +1,24 @@
 // Uploads an episode's video file to Vercel Blob as a private object, then
-// records the resulting blob pathname on that episode in lib/content.ts.
+// records the resulting blob pathname on that episode's Sanity document
+// (content.fullEpisode.videoPath).
+//
+// It only records the path. The video goes live once "Available" is switched
+// on for the episode's Full Episode in Sanity Studio.
 //
 // Usage:
-//   npm run upload-video -- <episodeId> <path-to-video-file>
+//   npm run upload-video -- <episode-slug> <path-to-video-file>
 //
-// Requires BLOB_READ_WRITE_TOKEN (from the Blob store dashboard) in .env.local.
+// Requires in .env.local:
+//   BLOB_READ_WRITE_TOKEN  — from the Blob store's .env.local tab in the Vercel dashboard
+//   SANITY_WRITE_TOKEN     — a Sanity API token with Editor rights (sanity.io/manage → API → Tokens)
+//   NEXT_PUBLIC_SANITY_PROJECT_ID, NEXT_PUBLIC_SANITY_DATASET
 
-import { existsSync, readFileSync, writeFileSync, createReadStream } from "node:fs";
+import { existsSync, readFileSync, createReadStream } from "node:fs";
 import path from "node:path";
 import { put } from "@vercel/blob";
-import { getEpisodeById } from "../lib/content";
+import { createClient } from "next-sanity";
 
 const repoRoot = path.resolve(path.dirname(process.argv[1]), "..");
-const contentPath = path.join(repoRoot, "lib", "content.ts");
 
 function loadEnvLocal() {
   const envPath = path.join(repoRoot, ".env.local");
@@ -40,100 +46,22 @@ function loadEnvLocal() {
   }
 }
 
-// Finds the [start, end] character range (inclusive of both braces) of the
-// `{ id: "<episodeId>", ... }` object literal, by brace-balance scanning rather
-// than a regex — the object contains arbitrarily nested braces (content.synopsis,
-// content.fullEpisode, etc.), which a non-recursive regex can't reliably span.
-function findEpisodeObjectRange(source: string, episodeId: string): { start: number; end: number } {
-  const idNeedle = `id: "${episodeId}"`;
-  const idIndex = source.indexOf(idNeedle);
-  if (idIndex === -1) {
-    throw new Error(`Could not locate episode "${episodeId}" in lib/content.ts`);
+function requireEnv(name: string, hint: string): string {
+  const value = process.env[name];
+  if (!value) {
+    console.error(`${name} is not set. ${hint}`);
+    process.exit(1);
   }
-
-  const start = source.lastIndexOf("{", idIndex);
-  if (start === -1) {
-    throw new Error(`Could not find the opening brace for episode "${episodeId}"`);
-  }
-
-  let depth = 0;
-  for (let i = start; i < source.length; i++) {
-    if (source[i] === "{") depth++;
-    else if (source[i] === "}") {
-      depth--;
-      if (depth === 0) {
-        return { start, end: i };
-      }
-    }
-  }
-
-  throw new Error(`Could not find the closing brace for episode "${episodeId}"`);
-}
-
-// Replaces the value of a `<key>: <value>` field within objectText, where <value>
-// is either a balanced `{ ... }` object literal or a bare reference (e.g. a shared
-// NOT_AVAILABLE_VIDEO constant) ending at the next comma/newline.
-function replaceField(objectText: string, key: string, newValue: string): string {
-  const needle = `${key}:`;
-  const keyIndex = objectText.indexOf(needle);
-  if (keyIndex === -1) {
-    throw new Error(`Could not find "${key}" field`);
-  }
-
-  let i = keyIndex + needle.length;
-  while (/\s/.test(objectText[i])) i++;
-
-  let valueEnd: number;
-  if (objectText[i] === "{") {
-    let depth = 0;
-    let j = i;
-    for (; j < objectText.length; j++) {
-      if (objectText[j] === "{") depth++;
-      else if (objectText[j] === "}") {
-        depth--;
-        if (depth === 0) {
-          j++;
-          break;
-        }
-      }
-    }
-    valueEnd = j;
-  } else {
-    let j = i;
-    while (j < objectText.length && objectText[j] !== "," && objectText[j] !== "\n") j++;
-    valueEnd = j;
-  }
-
-  return objectText.slice(0, i) + newValue + objectText.slice(valueEnd);
-}
-
-function updateEpisodeVideoPath(episodeId: string, videoPath: string) {
-  const source = readFileSync(contentPath, "utf8");
-  const { start, end } = findEpisodeObjectRange(source, episodeId);
-  const episodeObjectText = source.slice(start, end + 1);
-
-  const updatedObjectText = replaceField(
-    episodeObjectText,
-    "fullEpisode",
-    `{ available: true, videoPath: "${videoPath}" }`
-  );
-
-  writeFileSync(contentPath, source.slice(0, start) + updatedObjectText + source.slice(end + 1));
+  return value;
 }
 
 async function main() {
   loadEnvLocal();
 
-  const [episodeId, filePath] = process.argv.slice(2);
+  const [episodeSlug, filePath] = process.argv.slice(2);
 
-  if (!episodeId || !filePath) {
-    console.error("Usage: npm run upload-video -- <episodeId> <path-to-video-file>");
-    process.exit(1);
-  }
-
-  const episode = getEpisodeById(episodeId);
-  if (!episode) {
-    console.error(`No episode found with id "${episodeId}" in lib/content.ts`);
+  if (!episodeSlug || !filePath) {
+    console.error("Usage: npm run upload-video -- <episode-slug> <path-to-video-file>");
     process.exit(1);
   }
 
@@ -142,31 +70,69 @@ async function main() {
     process.exit(1);
   }
 
-  if (!process.env.BLOB_READ_WRITE_TOKEN) {
-    console.error(
-      "BLOB_READ_WRITE_TOKEN is not set. Add it to .env.local (copy it from the Blob store's " +
-        ".env.local tab in the Vercel dashboard) before uploading."
-    );
+  requireEnv(
+    "BLOB_READ_WRITE_TOKEN",
+    "Add it to .env.local (copy it from the Blob store's .env.local tab in the Vercel dashboard) before uploading."
+  );
+  const sanityToken = requireEnv(
+    "SANITY_WRITE_TOKEN",
+    "Add a Sanity API token with Editor rights to .env.local (sanity.io/manage → API → Tokens) before uploading."
+  );
+
+  const sanity = createClient({
+    projectId: requireEnv("NEXT_PUBLIC_SANITY_PROJECT_ID", "Add it to .env.local."),
+    dataset: requireEnv("NEXT_PUBLIC_SANITY_DATASET", "Add it to .env.local."),
+    apiVersion: "2026-09-02",
+    token: sanityToken,
+    useCdn: false,
+    // Raw sees both the published episode and any unpublished draft of it.
+    perspective: "raw",
+  });
+
+  // Both the published document and its draft (if one is open in Studio) get the
+  // path, so publishing that draft later doesn't drop it.
+  const ids = await sanity.fetch<string[]>(
+    `*[_type == "episode" && slug.current == $slug]._id`,
+    { slug: episodeSlug }
+  );
+
+  if (ids.length === 0) {
+    console.error(`No episode found in Sanity with slug "${episodeSlug}"`);
     process.exit(1);
   }
 
   const extension = path.extname(filePath) || ".mp4";
-  const blobPathname = `episodes/${episodeId}${extension}`;
+  const blobPathname = `episodes/${episodeSlug}${extension}`;
 
-  console.log(`Uploading ${path.basename(filePath)} for "${episodeId}" -> ${blobPathname} (private)...`);
+  console.log(`Uploading ${path.basename(filePath)} for "${episodeSlug}" -> ${blobPathname} (private)...`);
 
   const result = await put(blobPathname, createReadStream(filePath), {
     access: "private",
     addRandomSuffix: false,
     allowOverwrite: true,
+    // Splits the file into parts uploaded in parallel with retries — Vercel
+    // recommends this for anything over 100 MB.
+    multipart: true,
   });
 
-  updateEpisodeVideoPath(episodeId, result.pathname);
-
   console.log(`Uploaded. Blob pathname: ${result.pathname}`);
+
+  const transaction = sanity.transaction();
+  for (const id of ids) {
+    transaction.patch(id, (patch) =>
+      patch
+        .setIfMissing({ content: {} })
+        .setIfMissing({ "content.fullEpisode": { available: false } })
+        .set({ "content.fullEpisode.videoPath": result.pathname })
+    );
+  }
+  await transaction.commit();
+
   console.log(
-    `lib/content.ts updated: "${episodeId}".content.fullEpisode = { available: true, videoPath: "${result.pathname}" }`
+    `Sanity updated: "${episodeSlug}" content.fullEpisode.videoPath = "${result.pathname}" ` +
+      `(${ids.map((id) => (id.startsWith("drafts.") ? "draft" : "published")).join(" + ")}).`
   );
+  console.log('Switch on "Available" under Full Episode in Sanity Studio when it should go live.');
 }
 
 main().catch((err) => {
