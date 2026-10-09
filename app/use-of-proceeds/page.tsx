@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { getUseOfProceeds } from "@/lib/content";
 import type { UseOfProceedsPhaseWithGoal, UseOfProceedsPhaseWithStatus } from "@/lib/content";
+import { getTotalRaisedUsd } from "@/lib/stripeTotals";
 
 export const metadata: Metadata = {
   title: "Use of Proceeds · The Hidden Gospel",
@@ -12,7 +13,34 @@ const usd = new Intl.NumberFormat("en-US", {
   maximumFractionDigits: 0,
 });
 
-function PhaseWithGoal({ phase }: { phase: UseOfProceedsPhaseWithGoal }) {
+function GoalProgress({ raised, goal }: { raised: number; goal: number }) {
+  const percent = Math.min(100, Math.round((raised / goal) * 100));
+  return (
+    <div className="mt-4">
+      <div
+        className="hairline h-2 w-full overflow-hidden border"
+        role="progressbar"
+        aria-valuemin={0}
+        aria-valuemax={goal}
+        aria-valuenow={raised}
+        aria-label="Raised so far"
+      >
+        <div className="h-full bg-brass" style={{ width: `${percent}%` }} />
+      </div>
+      <p className="mt-2 text-sm opacity-80">
+        {usd.format(raised)} raised of {usd.format(goal)} ({percent}%)
+      </p>
+    </div>
+  );
+}
+
+function PhaseWithGoal({
+  phase,
+  raisedUsd,
+}: {
+  phase: UseOfProceedsPhaseWithGoal;
+  raisedUsd?: number;
+}) {
   return (
     <section>
       <h2 className="font-[family-name:var(--font-serif-display)] text-2xl">{phase.title}</h2>
@@ -22,6 +50,11 @@ function PhaseWithGoal({ phase }: { phase: UseOfProceedsPhaseWithGoal }) {
           {usd.format(phase.goalAmountUSD)}
         </p>
       )}
+      {typeof phase.goalAmountUSD === "number" &&
+        phase.goalAmountUSD > 0 &&
+        typeof raisedUsd === "number" && (
+          <GoalProgress raised={raisedUsd} goal={phase.goalAmountUSD} />
+        )}
       {phase.goalDisclaimer && (
         <p className="mt-1 text-xs italic opacity-60">{phase.goalDisclaimer}</p>
       )}
@@ -52,7 +85,7 @@ function PhaseWithStatus({ phase }: { phase: UseOfProceedsPhaseWithStatus }) {
 }
 
 export default async function UseOfProceedsPage() {
-  const data = await getUseOfProceeds();
+  const [data, raisedUsd] = await Promise.all([getUseOfProceeds(), getTotalRaisedUsd()]);
 
   if (!data) {
     return (
@@ -89,7 +122,7 @@ export default async function UseOfProceedsPage() {
       <div className="mt-14 space-y-14">
         {data.phase1 && (
           <>
-            <PhaseWithGoal phase={data.phase1} />
+            <PhaseWithGoal phase={data.phase1} raisedUsd={raisedUsd} />
             <div className="hairline border-t" />
           </>
         )}
