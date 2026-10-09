@@ -111,6 +111,9 @@ export async function POST(request: Request) {
     metadata: scope
       ? { scope: scope.scope, subjectId: scope.subjectId, ...attribution }
       : undefined,
+    // Session metadata isn't copied to the PaymentIntent, which is what
+    // Stripe's Payments view and exports show — so attribution goes there too.
+    payment_intent_data: attribution ? { metadata: attribution } : undefined,
   });
 
   return NextResponse.json({ url: session.url });
