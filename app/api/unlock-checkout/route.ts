@@ -2,7 +2,8 @@ import { NextResponse } from "next/server";
 import Stripe from "stripe";
 import { getEpisodeById, getCharacterById, getArtistById, getPrimaryArtwork } from "@/lib/content";
 import { isFreeCharacter } from "@/lib/characterAccess";
-import { minAmountFor, unlockScopeFor, type UnlockTarget } from "@/lib/unlockTarget";
+import { getLocale } from "@/lib/locale";
+import { minAmountFor, presetsFor, unlockScopeFor, type UnlockTarget } from "@/lib/unlockTarget";
 
 const MAX_AMOUNT_USD = 10_000;
 
@@ -21,7 +22,8 @@ export async function POST(request: Request) {
   let productName: string;
   let successPath: string;
   let cancelPath: string;
-  let attribution: { artistId: string; artistName: string; subjectName: string } | undefined;
+  let subjectName: string | undefined;
+  let attribution: { artistId: string; artistName: string } | undefined;
 
   if (target.type === "donate") {
     productName = "Donation to The Hidden Gospel";
@@ -35,6 +37,7 @@ export async function POST(request: Request) {
     productName = `Unlock ${episode.title}`;
     successPath = `/api/unlock?session_id={CHECKOUT_SESSION_ID}&episodeId=${target.episodeId}`;
     cancelPath = `/episodes/${target.episodeId}`;
+    subjectName = episode.title;
   } else if (target.type === "character") {
     if (isFreeCharacter(target.characterId)) {
       return NextResponse.json(
@@ -49,13 +52,10 @@ export async function POST(request: Request) {
     productName = `Unlock ${character.name} artwork`;
     successPath = `/api/character-unlock?session_id={CHECKOUT_SESSION_ID}&characterId=${target.characterId}`;
     cancelPath = `/characters/${target.characterId}`;
+    subjectName = character.name;
     const primaryArtwork = getPrimaryArtwork(character);
     if (primaryArtwork) {
-      attribution = {
-        artistId: primaryArtwork.artistId,
-        artistName: primaryArtwork.artistName,
-        subjectName: character.name,
-      };
+      attribution = { artistId: primaryArtwork.artistId, artistName: primaryArtwork.artistName };
     }
   } else if (target.type === "gallery") {
     const artist = await getArtistById(target.artistId);
@@ -65,7 +65,8 @@ export async function POST(request: Request) {
     productName = `Unlock ${artist.name} gallery`;
     successPath = `/api/gallery-unlock?session_id={CHECKOUT_SESSION_ID}&artistId=${target.artistId}`;
     cancelPath = `/artists/${target.artistId}`;
-    attribution = { artistId: artist.id, artistName: artist.name, subjectName: artist.name };
+    subjectName = artist.name;
+    attribution = { artistId: artist.id, artistName: artist.name };
   } else {
     return NextResponse.json({ error: "Invalid target" }, { status: 400 });
   }
@@ -94,6 +95,17 @@ export async function POST(request: Request) {
   const origin = new URL(request.url).origin;
   const scope = unlockScopeFor(target);
 
+  // Reporting fields, so payments can be broken down in Stripe's dashboard.
+  // amountType is inferred: a custom amount that equals a preset reads as "preset".
+  const reporting: Record<string, string> = {
+    unlockType: target.type,
+    ...(scope && { itemId: scope.subjectId }),
+    ...(subjectName && { subjectName }),
+    ...attribution,
+    locale: await getLocale(),
+    amountType: presetsFor(minAmount).includes(amountUsd) ? "preset" : "custom",
+  };
+
   const session = await stripe.checkout.sessions.create({
     mode: "payment",
     line_items: [
@@ -108,12 +120,13 @@ export async function POST(request: Request) {
     ],
     success_url: `${origin}${successPath}`,
     cancel_url: `${origin}${cancelPath}`,
+    // scope/subjectId are what the unlock routes verify; the rest is reporting.
     metadata: scope
-      ? { scope: scope.scope, subjectId: scope.subjectId, ...attribution }
-      : undefined,
+      ? { scope: scope.scope, subjectId: scope.subjectId, ...reporting }
+      : reporting,
     // Session metadata isn't copied to the PaymentIntent, which is what
-    // Stripe's Payments view and exports show — so attribution goes there too.
-    payment_intent_data: attribution ? { metadata: attribution } : undefined,
+    // Stripe's Payments view and exports show — so reporting fields go there too.
+    payment_intent_data: { metadata: reporting },
   });
 
   return NextResponse.json({ url: session.url });
