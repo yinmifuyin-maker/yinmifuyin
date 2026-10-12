@@ -1,6 +1,7 @@
 import type { PortableTextBlock } from "next-sanity";
 import { client } from "./client";
 import { urlFor } from "./image";
+import type { SanityImageSource } from "@sanity/image-url";
 import { placeholderCover } from "@/lib/placeholder";
 
 export type { PortableTextBlock };
@@ -381,14 +382,21 @@ export interface TeamMember {
   name: string;
   nameZh?: string;
   role: string;
-  bio: string;
+  bio?: string;
+  photoUrl?: string;
 }
 
 export async function getTeamMembers(): Promise<TeamMember[]> {
-  return fetchTagged<TeamMember[]>(
-    `*[_type == "teamMember"]{ "id": _id, name, nameZh, role, bio }`,
+  const raw = await fetchTagged<(Omit<TeamMember, "photoUrl"> & { photo?: SanityImageSource })[]>(
+    `*[_type == "teamMember"] | order(_createdAt asc){ "id": _id, name, nameZh, role, bio, photo }`,
     TAGS.teamMember
   );
+  return raw.map(({ photo, ...m }) => ({
+    ...m,
+    photoUrl: photo
+      ? urlFor(photo).width(480).height(480).fit("crop").auto("format").url()
+      : undefined,
+  }));
 }
 
 // ---------------------------------------------------------------------------

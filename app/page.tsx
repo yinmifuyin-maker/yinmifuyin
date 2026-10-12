@@ -36,20 +36,8 @@ export default async function Home() {
         )}
       </section>
 
-      <div className="hairline relative mx-auto max-w-3xl border-t" />
-
-      <section className="relative mx-auto max-w-3xl px-6 py-16">
-        {synopsis ? (
-          <PortableProse value={synopsis} className="text-center" />
-        ) : (
-          <p className="text-center text-base leading-relaxed opacity-90 sm:text-lg">
-            Coming soon.
-          </p>
-        )}
-      </section>
-
       {storyboard && (
-        <section className="relative mx-auto max-w-3xl px-6 pb-16">
+        <section className="relative mx-auto max-w-3xl px-6 pb-16 pt-4">
           <p className="text-center text-xs uppercase tracking-widest opacity-60">
             Storyboard · Episode {storyboard.episodeNumber}
           </p>
@@ -83,6 +71,18 @@ export default async function Home() {
           </div>
         </section>
       )}
+
+      <div className="hairline relative mx-auto max-w-3xl border-t" />
+
+      <section className="relative mx-auto max-w-3xl px-6 py-16">
+        {synopsis ? (
+          <PortableProse value={synopsis} className="text-center" />
+        ) : (
+          <p className="text-center text-base leading-relaxed opacity-90 sm:text-lg">
+            Coming soon.
+          </p>
+        )}
+      </section>
 
       <section className="relative mx-auto grid max-w-4xl grid-cols-2 gap-4 px-6 pb-20 sm:grid-cols-4">
         {[
