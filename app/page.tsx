@@ -1,15 +1,17 @@
 import Link from "next/link";
-import { getSeries, getConceptArtPool } from "@/lib/content";
+import { getSeries, getConceptArtPool, getFeaturedStoryboard } from "@/lib/content";
 import { getLocale, pick } from "@/lib/locale";
 import PortableProse from "@/components/PortableProse";
 import HomeBackgroundArt from "@/components/HomeBackgroundArt";
 import HeroTitle from "@/components/HeroTitle";
+import GatedVideo from "@/components/GatedVideo";
 
 export default async function Home() {
-  const [series, pool, locale] = await Promise.all([
+  const [series, pool, locale, storyboard] = await Promise.all([
     getSeries(),
     getConceptArtPool(),
     getLocale(),
+    getFeaturedStoryboard(),
   ]);
 
   const synopsis = series ? pick(locale, series.synopsisEn, series.synopsisZh) : undefined;
@@ -39,6 +41,42 @@ export default async function Home() {
           </p>
         )}
       </section>
+
+      {storyboard && (
+        <section className="relative mx-auto max-w-3xl px-6 pb-16">
+          <p className="text-center text-xs uppercase tracking-widest opacity-60">
+            Storyboard · Episode {storyboard.episodeNumber}
+          </p>
+          <h2 className="mt-1 text-center font-[family-name:var(--font-serif-display)] text-2xl">
+            <Link href={`/episodes/${storyboard.episodeId}`} className="hover:opacity-80">
+              {storyboard.episodeTitle}
+            </Link>
+          </h2>
+          {storyboard.artistName && (
+            <p className="mt-1 text-center text-sm opacity-70">
+              Storyboard by{" "}
+              {storyboard.artistId ? (
+                <Link href={`/artists/${storyboard.artistId}`} className="underline underline-offset-2">
+                  {storyboard.artistName}
+                </Link>
+              ) : (
+                storyboard.artistName
+              )}
+            </p>
+          )}
+          <div className="mt-6 bg-parchment/70 backdrop-blur-sm">
+            <GatedVideo
+              endpoint={`/api/storyboard-video/${storyboard.episodeId}`}
+              unlockTarget={{
+                type: "episode",
+                episodeId: storyboard.episodeId,
+                episodeTitle: storyboard.episodeTitle,
+                category: "Storyboard",
+              }}
+            />
+          </div>
+        </section>
+      )}
 
       <section className="relative mx-auto grid max-w-4xl grid-cols-2 gap-4 px-6 pb-20 sm:grid-cols-4">
         {[

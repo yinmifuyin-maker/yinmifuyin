@@ -101,15 +101,22 @@ export default function EpisodeCategoryPanel({ episode }: { episode: Episode }) 
                   {cat.key === "fullEpisode" ? (
                     <EpisodePlayer episodeId={episode.id} episodeTitle={episode.title} />
                   ) : cat.key === "storyboard" ? (
-                    <GatedVideo
-                      endpoint={`/api/storyboard-video/${episode.id}`}
-                      unlockTarget={{
-                        type: "episode",
-                        episodeId: episode.id,
-                        episodeTitle: episode.title,
-                        category: cat.label,
-                      }}
-                    />
+                    <>
+                      {episode.content.storyboard?.artistName && (
+                        <p className="mb-3 text-sm opacity-70">
+                          Storyboard by {episode.content.storyboard.artistName}
+                        </p>
+                      )}
+                      <GatedVideo
+                        endpoint={`/api/storyboard-video/${episode.id}`}
+                        unlockTarget={{
+                          type: "episode",
+                          episodeId: episode.id,
+                          episodeTitle: episode.title,
+                          category: cat.label,
+                        }}
+                      />
+                    </>
                   ) : (
                     <EpisodeCategoryContent episodeId={episode.id} category={cat.key} />
                   )}
