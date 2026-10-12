@@ -51,6 +51,13 @@ export async function getSeries(): Promise<Series | undefined> {
 // Artists
 // ---------------------------------------------------------------------------
 
+/** A sketch video on an artist's page. Blob paths stay server-side (see getSketchVideoPaths). */
+export interface SketchVideo {
+  key: string; // the array item's _key, which the upload script sets
+  title: string;
+  hasPreview: boolean;
+}
+
 export interface Artist {
   id: string; // slug
   name: string;
@@ -59,8 +66,10 @@ export interface Artist {
   location?: string;
   bio: string;
   galleryPriceId?: string;
+  sketchVideos: SketchVideo[];
 }
 
+// Only sketches switched on in Studio, with a title and an uploaded video, reach the site.
 const ARTIST_PROJECTION = /* groq */ `{
   "id": slug.current,
   name,
@@ -68,7 +77,15 @@ const ARTIST_PROJECTION = /* groq */ `{
   studio,
   location,
   bio,
-  galleryPriceId
+  galleryPriceId,
+  "sketchVideos": coalesce(
+    sketchVideos[available == true && defined(title) && defined(videoPath)]{
+      "key": _key,
+      title,
+      "hasPreview": defined(previewPath)
+    },
+    []
+  )
 }`;
 
 export async function getArtists(): Promise<Artist[]> {
@@ -80,6 +97,20 @@ export async function getArtistById(id: string): Promise<Artist | undefined> {
     `*[_type == "artist" && slug.current == $id][0] ${ARTIST_PROJECTION}`,
     TAGS.artist,
     { id }
+  );
+  return doc ?? undefined;
+}
+
+export async function getSketchVideoPaths(
+  artistId: string,
+  sketchKey: string
+): Promise<{ videoPath: string; previewPath?: string } | undefined> {
+  const doc = await fetchTagged<{ videoPath: string; previewPath?: string } | null>(
+    `*[_type == "artist" && slug.current == $artistId][0].sketchVideos[
+      _key == $sketchKey && available == true && defined(title) && defined(videoPath)
+    ][0]{ videoPath, previewPath }`,
+    TAGS.artist,
+    { artistId, sketchKey }
   );
   return doc ?? undefined;
 }
@@ -217,7 +248,13 @@ export interface EpisodeContent {
   synopsis?: EpisodeContentEntry;
   sneakPeek?: EpisodeContentEntry;
   fullScript?: EpisodeContentEntry;
-  storyboard?: { available: boolean };
+  storyboard?: {
+    available: boolean;
+    videoPath?: string;
+    previewPath?: string;
+    artistName?: string;
+    artistId?: string;
+  };
   fullEpisode?: { available: boolean; videoPath?: string };
 }
 
@@ -248,7 +285,14 @@ const EPISODE_PROJECTION = /* groq */ `{
   teaser,
   coverImage,
   priceId,
-  content
+  content{
+    ...,
+    storyboard{
+      ...,
+      "artistName": artist->name,
+      "artistId": artist->slug.current
+    }
+  }
 }`;
 
 function resolveEpisode(raw: RawEpisode): Episode {
@@ -268,7 +312,7 @@ function resolveEpisode(raw: RawEpisode): Episode {
 export async function getEpisodes(): Promise<Episode[]> {
   const raw = await fetchTagged<RawEpisode[]>(
     `*[_type == "episode"] | order(number asc) ${EPISODE_PROJECTION}`,
-    TAGS.episode
+    [...TAGS.episode, ...TAGS.artist]
   );
   return raw.map(resolveEpisode);
 }
@@ -276,10 +320,38 @@ export async function getEpisodes(): Promise<Episode[]> {
 export async function getEpisodeById(id: string): Promise<Episode | undefined> {
   const raw = await fetchTagged<RawEpisode | null>(
     `*[_type == "episode" && slug.current == $id][0] ${EPISODE_PROJECTION}`,
-    TAGS.episode,
+    [...TAGS.episode, ...TAGS.artist],
     { id }
   );
   return raw ? resolveEpisode(raw) : undefined;
+}
+
+export interface FeaturedStoryboard {
+  episodeId: string;
+  episodeNumber: number;
+  episodeTitle: string;
+  artistName?: string;
+  artistId?: string;
+}
+
+/** The storyboard video switched on for the home page, if any (lowest episode number wins). */
+export async function getFeaturedStoryboard(): Promise<FeaturedStoryboard | undefined> {
+  const doc = await fetchTagged<FeaturedStoryboard | null>(
+    `*[_type == "episode"
+      && content.storyboard.featureOnHome == true
+      && content.storyboard.available == true
+      && defined(content.storyboard.videoPath)
+    ] | order(number asc)[0]{
+      "episodeId": slug.current,
+      "episodeNumber": number,
+      "episodeTitle": title,
+      "artistName": content.storyboard.artist->name,
+      "artistId": content.storyboard.artist->slug.current
+    }`,
+    // The artist's name comes from the artist document, so its edits must refresh this too.
+    [...TAGS.episode, ...TAGS.artist]
+  );
+  return doc ?? undefined;
 }
 
 /** The 5 content categories shown in the episode overlay, in display order. */

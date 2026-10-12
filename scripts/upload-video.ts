@@ -1,18 +1,40 @@
-// Uploads an episode's video file to Vercel Blob as a private object, then
-// records the resulting blob pathname on that episode in lib/content.ts.
+// Uploads a video to Vercel Blob as a private object, then records the blob
+// pathname on the matching Sanity document. Three kinds of video:
+//
+//   episode     the full episode         → episode content.fullEpisode.videoPath
+//   storyboard  an episode's storyboard  → episode content.storyboard.videoPath / previewPath
+//   sketch      an artist's sketch video → artist sketchVideos[_key == <sketch-id>].videoPath / previewPath
+//
+// Storyboards and sketches can take a short preview clip (--preview), which
+// visitors who haven't donated see instead of the full video.
+//
+// It only records paths. A video goes live once "Available" is switched on for
+// it in Sanity Studio (and, for a new sketch, once it has a title there).
 //
 // Usage:
-//   npm run upload-video -- <episodeId> <path-to-video-file>
+//   npm run upload-video -- episode <episode-slug> <video-file>
+//   npm run upload-video -- storyboard <episode-slug> <video-file> [--preview <clip-file>]
+//   npm run upload-video -- sketch <artist-slug> <sketch-id> <video-file> [--preview <clip-file>]
 //
-// Requires BLOB_READ_WRITE_TOKEN (from the Blob store dashboard) in .env.local.
+// <sketch-id> is a short name you pick for the sketch, e.g. "warmups-1". Uploading
+// again with the same id replaces that sketch's video.
+//
+// Requires in .env.local:
+//   BLOB_READ_WRITE_TOKEN  — from the Blob store's .env.local tab in the Vercel dashboard
+//   SANITY_WRITE_TOKEN     — a Sanity API token with Editor rights (sanity.io/manage → API → Tokens)
+//   NEXT_PUBLIC_SANITY_PROJECT_ID, NEXT_PUBLIC_SANITY_DATASET
 
-import { existsSync, readFileSync, writeFileSync, createReadStream } from "node:fs";
+import { existsSync, readFileSync, createReadStream } from "node:fs";
 import path from "node:path";
 import { put } from "@vercel/blob";
-import { getEpisodeById } from "../lib/content";
+import { createClient, type SanityClient } from "next-sanity";
+
+const USAGE = `Usage:
+  npm run upload-video -- episode <episode-slug> <video-file>
+  npm run upload-video -- storyboard <episode-slug> <video-file> [--preview <clip-file>]
+  npm run upload-video -- sketch <artist-slug> <sketch-id> <video-file> [--preview <clip-file>]`;
 
 const repoRoot = path.resolve(path.dirname(process.argv[1]), "..");
-const contentPath = path.join(repoRoot, "lib", "content.ts");
 
 function loadEnvLocal() {
   const envPath = path.join(repoRoot, ".env.local");
@@ -40,133 +62,202 @@ function loadEnvLocal() {
   }
 }
 
-// Finds the [start, end] character range (inclusive of both braces) of the
-// `{ id: "<episodeId>", ... }` object literal, by brace-balance scanning rather
-// than a regex — the object contains arbitrarily nested braces (content.synopsis,
-// content.fullEpisode, etc.), which a non-recursive regex can't reliably span.
-function findEpisodeObjectRange(source: string, episodeId: string): { start: number; end: number } {
-  const idNeedle = `id: "${episodeId}"`;
-  const idIndex = source.indexOf(idNeedle);
-  if (idIndex === -1) {
-    throw new Error(`Could not locate episode "${episodeId}" in lib/content.ts`);
-  }
-
-  const start = source.lastIndexOf("{", idIndex);
-  if (start === -1) {
-    throw new Error(`Could not find the opening brace for episode "${episodeId}"`);
-  }
-
-  let depth = 0;
-  for (let i = start; i < source.length; i++) {
-    if (source[i] === "{") depth++;
-    else if (source[i] === "}") {
-      depth--;
-      if (depth === 0) {
-        return { start, end: i };
-      }
-    }
-  }
-
-  throw new Error(`Could not find the closing brace for episode "${episodeId}"`);
+function fail(message: string): never {
+  console.error(message);
+  process.exit(1);
 }
 
-// Replaces the value of a `<key>: <value>` field within objectText, where <value>
-// is either a balanced `{ ... }` object literal or a bare reference (e.g. a shared
-// NOT_AVAILABLE_VIDEO constant) ending at the next comma/newline.
-function replaceField(objectText: string, key: string, newValue: string): string {
-  const needle = `${key}:`;
-  const keyIndex = objectText.indexOf(needle);
-  if (keyIndex === -1) {
-    throw new Error(`Could not find "${key}" field`);
-  }
-
-  let i = keyIndex + needle.length;
-  while (/\s/.test(objectText[i])) i++;
-
-  let valueEnd: number;
-  if (objectText[i] === "{") {
-    let depth = 0;
-    let j = i;
-    for (; j < objectText.length; j++) {
-      if (objectText[j] === "{") depth++;
-      else if (objectText[j] === "}") {
-        depth--;
-        if (depth === 0) {
-          j++;
-          break;
-        }
-      }
-    }
-    valueEnd = j;
-  } else {
-    let j = i;
-    while (j < objectText.length && objectText[j] !== "," && objectText[j] !== "\n") j++;
-    valueEnd = j;
-  }
-
-  return objectText.slice(0, i) + newValue + objectText.slice(valueEnd);
+function requireEnv(name: string, hint: string): string {
+  const value = process.env[name];
+  if (!value) fail(`${name} is not set. ${hint}`);
+  return value;
 }
 
-function updateEpisodeVideoPath(episodeId: string, videoPath: string) {
-  const source = readFileSync(contentPath, "utf8");
-  const { start, end } = findEpisodeObjectRange(source, episodeId);
-  const episodeObjectText = source.slice(start, end + 1);
+function requireFile(filePath: string | undefined, what: string): string {
+  if (!filePath) fail(`Missing ${what}.\n\n${USAGE}`);
+  if (!existsSync(filePath)) fail(`File not found: ${filePath}`);
+  return filePath;
+}
 
-  const updatedObjectText = replaceField(
-    episodeObjectText,
-    "fullEpisode",
-    `{ available: true, videoPath: "${videoPath}" }`
+type Job =
+  | { kind: "episode"; slug: string; video: string }
+  | { kind: "storyboard"; slug: string; video: string; preview?: string }
+  | { kind: "sketch"; artistSlug: string; sketchId: string; video: string; preview?: string };
+
+function parseArgs(argv: string[]): Job {
+  const args = [...argv];
+  let preview: string | undefined;
+  const previewFlag = args.indexOf("--preview");
+  if (previewFlag !== -1) {
+    preview = requireFile(args[previewFlag + 1], "preview clip after --preview");
+    args.splice(previewFlag, 2);
+  }
+
+  const [kind, ...rest] = args;
+  switch (kind) {
+    case "episode":
+      if (preview) fail("Full episodes don't take a preview clip.");
+      return { kind, slug: rest[0] ?? fail(USAGE), video: requireFile(rest[1], "video file") };
+    case "storyboard":
+      return { kind, slug: rest[0] ?? fail(USAGE), video: requireFile(rest[1], "video file"), preview };
+    case "sketch": {
+      const sketchId = rest[1] ?? fail(USAGE);
+      if (!/^[a-z0-9][a-z0-9-]*$/.test(sketchId)) {
+        fail(`Sketch id "${sketchId}" should be lowercase letters, numbers and dashes, e.g. warmups-1.`);
+      }
+      return {
+        kind,
+        artistSlug: rest[0] ?? fail(USAGE),
+        sketchId,
+        video: requireFile(rest[2], "video file"),
+        preview,
+      };
+    }
+    default:
+      fail(USAGE);
+  }
+}
+
+async function upload(filePath: string, pathnameWithoutExtension: string): Promise<string> {
+  const pathname = pathnameWithoutExtension + (path.extname(filePath) || ".mp4");
+  console.log(`Uploading ${path.basename(filePath)} -> ${pathname} (private)...`);
+
+  const result = await put(pathname, createReadStream(filePath), {
+    access: "private",
+    addRandomSuffix: false,
+    allowOverwrite: true,
+    // Splits the file into parts uploaded in parallel with retries — Vercel
+    // recommends this for anything over 100 MB.
+    multipart: true,
+  });
+
+  console.log(`Uploaded. Blob pathname: ${result.pathname}`);
+  return result.pathname;
+}
+
+// Both the published document and its draft (if one is open in Studio) get the
+// paths, so publishing that draft later doesn't drop them.
+async function documentIds(sanity: SanityClient, type: "episode" | "artist", slug: string) {
+  const ids = await sanity.fetch<string[]>(`*[_type == $type && slug.current == $slug]._id`, {
+    type,
+    slug,
+  });
+  if (ids.length === 0) fail(`No ${type} found in Sanity with slug "${slug}"`);
+  return ids;
+}
+
+function describe(ids: string[]) {
+  return ids.map((id) => (id.startsWith("drafts.") ? "draft" : "published")).join(" + ");
+}
+
+async function recordEpisodeVideo(
+  sanity: SanityClient,
+  ids: string[],
+  category: "fullEpisode" | "storyboard",
+  paths: { videoPath: string; previewPath?: string }
+) {
+  const fields: Record<string, string> = { [`content.${category}.videoPath`]: paths.videoPath };
+  if (paths.previewPath) fields[`content.${category}.previewPath`] = paths.previewPath;
+
+  const transaction = sanity.transaction();
+  for (const id of ids) {
+    transaction.patch(id, (patch) =>
+      patch
+        .setIfMissing({ content: {} })
+        .setIfMissing({ [`content.${category}`]: { available: false } })
+        .set(fields)
+    );
+  }
+  await transaction.commit();
+}
+
+async function recordSketchVideo(
+  sanity: SanityClient,
+  ids: string[],
+  sketchId: string,
+  paths: { videoPath: string; previewPath?: string }
+) {
+  const existing = await sanity.fetch<{ _id: string; hasSketch: boolean }[]>(
+    `*[_id in $ids]{ _id, "hasSketch": count(sketchVideos[_key == $sketchId]) > 0 }`,
+    { ids, sketchId }
   );
 
-  writeFileSync(contentPath, source.slice(0, start) + updatedObjectText + source.slice(end + 1));
+  const transaction = sanity.transaction();
+  for (const { _id, hasSketch } of existing) {
+    if (hasSketch) {
+      const item = `sketchVideos[_key == "${sketchId}"]`;
+      const fields: Record<string, string> = { [`${item}.videoPath`]: paths.videoPath };
+      if (paths.previewPath) fields[`${item}.previewPath`] = paths.previewPath;
+      transaction.patch(_id, (patch) => patch.set(fields));
+    } else {
+      // A new sketch starts hidden and untitled; it needs a title and "Available"
+      // switched on in Studio before the site shows it.
+      transaction.patch(_id, (patch) =>
+        patch.setIfMissing({ sketchVideos: [] }).append("sketchVideos", [
+          { _key: sketchId, _type: "sketchVideo", available: false, ...paths },
+        ])
+      );
+    }
+  }
+  await transaction.commit();
 }
 
 async function main() {
   loadEnvLocal();
 
-  const [episodeId, filePath] = process.argv.slice(2);
+  const job = parseArgs(process.argv.slice(2));
 
-  if (!episodeId || !filePath) {
-    console.error("Usage: npm run upload-video -- <episodeId> <path-to-video-file>");
-    process.exit(1);
-  }
+  requireEnv(
+    "BLOB_READ_WRITE_TOKEN",
+    "Add it to .env.local (copy it from the Blob store's .env.local tab in the Vercel dashboard) before uploading."
+  );
+  const sanityToken = requireEnv(
+    "SANITY_WRITE_TOKEN",
+    "Add a Sanity API token with Editor rights to .env.local (sanity.io/manage → API → Tokens) before uploading."
+  );
 
-  const episode = getEpisodeById(episodeId);
-  if (!episode) {
-    console.error(`No episode found with id "${episodeId}" in lib/content.ts`);
-    process.exit(1);
-  }
-
-  if (!existsSync(filePath)) {
-    console.error(`File not found: ${filePath}`);
-    process.exit(1);
-  }
-
-  if (!process.env.BLOB_READ_WRITE_TOKEN) {
-    console.error(
-      "BLOB_READ_WRITE_TOKEN is not set. Add it to .env.local (copy it from the Blob store's " +
-        ".env.local tab in the Vercel dashboard) before uploading."
-    );
-    process.exit(1);
-  }
-
-  const extension = path.extname(filePath) || ".mp4";
-  const blobPathname = `episodes/${episodeId}${extension}`;
-
-  console.log(`Uploading ${path.basename(filePath)} for "${episodeId}" -> ${blobPathname} (private)...`);
-
-  const result = await put(blobPathname, createReadStream(filePath), {
-    access: "private",
-    addRandomSuffix: false,
-    allowOverwrite: true,
+  const sanity = createClient({
+    projectId: requireEnv("NEXT_PUBLIC_SANITY_PROJECT_ID", "Add it to .env.local."),
+    dataset: requireEnv("NEXT_PUBLIC_SANITY_DATASET", "Add it to .env.local."),
+    apiVersion: "2026-09-02",
+    token: sanityToken,
+    useCdn: false,
+    // Raw sees both the published document and any unpublished draft of it.
+    perspective: "raw",
   });
 
-  updateEpisodeVideoPath(episodeId, result.pathname);
+  if (job.kind === "sketch") {
+    const ids = await documentIds(sanity, "artist", job.artistSlug);
+    const base = `sketches/${job.artistSlug}/${job.sketchId}`;
+    const paths = {
+      videoPath: await upload(job.video, base),
+      ...(job.preview && { previewPath: await upload(job.preview, `${base}-preview`) }),
+    };
+    await recordSketchVideo(sanity, ids, job.sketchId, paths);
 
-  console.log(`Uploaded. Blob pathname: ${result.pathname}`);
-  console.log(
-    `lib/content.ts updated: "${episodeId}".content.fullEpisode = { available: true, videoPath: "${result.pathname}" }`
-  );
+    console.log(`Sanity updated: artist "${job.artistSlug}" sketch "${job.sketchId}" (${describe(ids)}).`);
+    console.log('In Studio, give the sketch a title and switch on "Available" when it should go live.');
+    return;
+  }
+
+  const ids = await documentIds(sanity, "episode", job.slug);
+
+  if (job.kind === "episode") {
+    const videoPath = await upload(job.video, `episodes/${job.slug}`);
+    await recordEpisodeVideo(sanity, ids, "fullEpisode", { videoPath });
+    console.log(`Sanity updated: "${job.slug}" full episode video (${describe(ids)}).`);
+    console.log('Switch on "Available" under Full Episode in Sanity Studio when it should go live.');
+    return;
+  }
+
+  const base = `storyboards/${job.slug}`;
+  const paths = {
+    videoPath: await upload(job.video, base),
+    ...(job.preview && { previewPath: await upload(job.preview, `${base}-preview`) }),
+  };
+  await recordEpisodeVideo(sanity, ids, "storyboard", paths);
+  console.log(`Sanity updated: "${job.slug}" storyboard video (${describe(ids)}).`);
+  console.log('Switch on "Available" under Storyboard in Sanity Studio when it should go live.');
 }
 
 main().catch((err) => {
