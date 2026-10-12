@@ -14,6 +14,7 @@ const TAGS = {
   artist: ["artist"],
   teamMember: ["teamMember"],
   useOfProceeds: ["useOfProceeds"],
+  homeFigures: ["homeFigures"],
 } as const;
 
 function fetchTagged<T>(query: string, tags: readonly string[], params: Record<string, unknown> = {}) {
@@ -464,4 +465,37 @@ export async function getConceptArtPool(): Promise<ConceptArtImage[]> {
     pool.push({ url: urlFor(image).width(600).height(900).fit("crop").auto("format").url() });
   }
   return pool;
+}
+
+// ---------------------------------------------------------------------------
+// Home page character figures — full-body transparent character art that
+// rotates down either side of the home page. Curated in the "homeFigures"
+// singleton so the line-up can change without a deploy.
+// ---------------------------------------------------------------------------
+
+export interface HomeFigure {
+  url: string;
+  // Character name -- groups a character's colourways onto one side.
+  name: string;
+}
+
+interface RawHomeFigure {
+  name?: string;
+  image?: { asset?: { _ref: string } } | null;
+}
+
+export async function getHomeFigures(): Promise<HomeFigure[]> {
+  const raw = await fetchTagged<RawHomeFigure[] | null>(
+    `*[_type == "homeFigures"][0].figures[]{ name, image }`,
+    TAGS.homeFigures
+  );
+
+  return (raw ?? [])
+    .filter((f) => f.image?.asset)
+    .map((f) => ({
+      // Figures render at most 56rem tall, so 1200px stays sharp on most
+      // screens; auto("format") serves WebP/AVIF with the transparency intact.
+      url: urlFor(f.image!).height(1200).auto("format").quality(80).url(),
+      name: f.name ?? "",
+    }));
 }

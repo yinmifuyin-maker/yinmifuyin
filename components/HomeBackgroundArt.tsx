@@ -8,7 +8,15 @@ function pickRandom<T>(pool: T[]): T {
   return pool[Math.floor(Math.random() * pool.length)];
 }
 
-function Side({ pool, side }: { pool: ConceptArtImage[]; side: "left" | "right" }) {
+function Side({
+  pool,
+  side,
+  hideOnWide,
+}: {
+  pool: ConceptArtImage[];
+  side: "left" | "right";
+  hideOnWide: boolean;
+}) {
   // Both sides start on the same, deterministic first pool item so server and client
   // render identical markup on the first pass -- Math.random() must never run during
   // SSR, or hydration will mismatch on the <Image src>. The real random pick happens
@@ -27,7 +35,7 @@ function Side({ pool, side }: { pool: ConceptArtImage[]; side: "left" | "right" 
 
   return (
     <div
-      className={`bg-edge-fade pointer-events-none fixed inset-y-0 ${edgeClass} -z-10 w-[26rem] max-w-[60vw] overflow-hidden opacity-[0.08]`}
+      className={`bg-edge-fade pointer-events-none fixed inset-y-0 ${hideOnWide ? "xl:hidden" : ""} ${edgeClass} -z-10 w-[26rem] max-w-[60vw] overflow-hidden opacity-[0.08]`}
     >
       <Image
         src={image.url}
@@ -42,13 +50,20 @@ function Side({ pool, side }: { pool: ConceptArtImage[]; side: "left" | "right" 
   );
 }
 
-export default function HomeBackgroundArt({ images }: { images: ConceptArtImage[] }) {
+export default function HomeBackgroundArt({
+  images,
+  hideOnWide = false,
+}: {
+  images: ConceptArtImage[];
+  // Hand the xl+ edges over to the rotating HomeFigures.
+  hideOnWide?: boolean;
+}) {
   if (images.length === 0) return null;
 
   return (
     <>
-      <Side pool={images} side="left" />
-      <Side pool={images} side="right" />
+      <Side pool={images} side="left" hideOnWide={hideOnWide} />
+      <Side pool={images} side="right" hideOnWide={hideOnWide} />
     </>
   );
 }

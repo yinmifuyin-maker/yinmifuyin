@@ -1,24 +1,30 @@
 import Link from "next/link";
-import { getSeries, getConceptArtPool, getFeaturedStoryboard } from "@/lib/content";
+import { getSeries, getConceptArtPool, getFeaturedStoryboard, getHomeFigures } from "@/lib/content";
 import { getLocale, pick } from "@/lib/locale";
 import PortableProse from "@/components/PortableProse";
 import HomeBackgroundArt from "@/components/HomeBackgroundArt";
+import HomeFigures from "@/components/HomeFigures";
 import HeroTitle from "@/components/HeroTitle";
 import GatedVideo from "@/components/GatedVideo";
 
 export default async function Home() {
-  const [series, pool, locale, storyboard] = await Promise.all([
+  const [series, pool, locale, storyboard, figures] = await Promise.all([
     getSeries(),
     getConceptArtPool(),
     getLocale(),
     getFeaturedStoryboard(),
+    getHomeFigures(),
   ]);
 
   const synopsis = series ? pick(locale, series.synopsisEn, series.synopsisZh) : undefined;
 
   return (
     <div className="relative">
-      <HomeBackgroundArt images={pool} />
+      {/* Below xl there is no gutter beside the text for full figures, so the
+          faint concept-art backdrop stays; from xl up the rotating figures take
+          its place (it falls back to the backdrop until figures exist in Sanity). */}
+      <HomeBackgroundArt images={pool} hideOnWide={figures.length > 0} />
+      <HomeFigures figures={figures} />
 
       <section className="relative mx-auto flex max-w-3xl flex-col items-center gap-6 px-6 py-20 text-center sm:py-28">
         <HeroTitle titleZh={series?.titleZh} title={series?.title} />
