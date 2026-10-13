@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { EPISODE_CATEGORIES, type Episode } from "@/lib/content";
-import EpisodeCategoryContent from "./EpisodeCategoryContent";
+import ScreenplayViewer from "./ScreenplayViewer";
 import EpisodePlayer from "./EpisodePlayer";
 import GatedVideo from "./GatedVideo";
 import AccessDisclaimer from "./AccessDisclaimer";
@@ -17,6 +17,8 @@ export default function EpisodeCategoryPanel({ episode }: { episode: Episode }) 
   const [unlocked, setUnlocked] = useState<boolean | null>(hasPaidAvailable ? null : true);
   const [expandedKey, setExpandedKey] = useState<string | null>(null);
   const [modalCategory, setModalCategory] = useState<string | null>(null);
+  // The written categories open as screenplay pages rather than inline.
+  const [reading, setReading] = useState<{ key: string; label: string } | null>(null);
 
   useEffect(() => {
     if (!hasPaidAvailable) return;
@@ -50,10 +52,12 @@ export default function EpisodeCategoryPanel({ episode }: { episode: Episode }) 
             !categoryUnlocked && cat.key === "storyboard" && !!episode.content.storyboard?.previewPath;
           const canOpen = categoryUnlocked || previewOnly;
           const isOpen = expandedKey === cat.key;
+          const written = cat.key === "synopsis" || cat.key === "sneakPeek" || cat.key === "fullScript";
 
           let rightLabel = "";
           if (available) {
             if (!statusKnown) rightLabel = "…";
+            else if (categoryUnlocked && written) rightLabel = cat.free ? "Free — Read" : "Read";
             else if (categoryUnlocked) rightLabel = isOpen ? "Hide" : cat.free ? "Free — View" : "View";
             else if (previewOnly) rightLabel = isOpen ? "Hide" : "Free Preview";
             else rightLabel = "Donate to Unlock";
@@ -63,6 +67,10 @@ export default function EpisodeCategoryPanel({ episode }: { episode: Episode }) 
             if (!available || !statusKnown) return;
             if (!canOpen) {
               setModalCategory(cat.label);
+              return;
+            }
+            if (written) {
+              setReading({ key: cat.key, label: cat.label });
               return;
             }
             setExpandedKey(isOpen ? null : cat.key);
@@ -96,7 +104,7 @@ export default function EpisodeCategoryPanel({ episode }: { episode: Episode }) 
                 )}
               </button>
 
-              {available && isOpen && canOpen && (
+              {available && isOpen && canOpen && !written && (
                 <div className="mt-4">
                   {cat.key === "fullEpisode" ? (
                     <EpisodePlayer episodeId={episode.id} episodeTitle={episode.title} />
@@ -117,9 +125,7 @@ export default function EpisodeCategoryPanel({ episode }: { episode: Episode }) 
                         }}
                       />
                     </>
-                  ) : (
-                    <EpisodeCategoryContent episodeId={episode.id} category={cat.key} />
-                  )}
+                  ) : null}
                 </div>
               )}
             </div>
@@ -128,6 +134,15 @@ export default function EpisodeCategoryPanel({ episode }: { episode: Episode }) 
       </div>
 
       {hasPaidAvailable && <AccessDisclaimer />}
+
+      {reading && (
+        <ScreenplayViewer
+          endpoint={`/api/episode-content/${episode.id}/${reading.key}`}
+          kicker={`Episode ${episode.number} · ${reading.label}`}
+          title={episode.title}
+          onClose={() => setReading(null)}
+        />
+      )}
 
       {modalCategory && (
         <UnlockModal

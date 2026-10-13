@@ -8,7 +8,7 @@ type WebhookPayload = { tags?: string[] };
 //   URL: https://<your-domain>/api/revalidate
 //   Dataset: production
 //   Trigger on: Create, Update, Delete
-//   Filter: _type in ["series","character","episode","artist","teamMember","useOfProceeds","homeFigures"]
+//   Filter: _type in ["series","character","episode","artist","teamMember","useOfProceeds","homeFigures","shortStory"]
 //   Projection: {"tags": [_type]}
 //   Secret: same value as SANITY_REVALIDATE_SECRET below
 export async function POST(req: NextRequest) {

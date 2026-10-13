@@ -16,6 +16,7 @@ const TAGS = {
   teamMember: ["teamMember"],
   useOfProceeds: ["useOfProceeds"],
   homeFigures: ["homeFigures"],
+  shortStory: ["shortStory"],
 } as const;
 
 function fetchTagged<T>(query: string, tags: readonly string[], params: Record<string, unknown> = {}) {
@@ -374,6 +375,52 @@ export const EPISODE_CATEGORIES: {
 
 export function episodeHasAvailableContent(episode: Episode): boolean {
   return EPISODE_CATEGORIES.some((c) => episode.content[c.key]?.available);
+}
+
+// ---------------------------------------------------------------------------
+// Short stories ("Hidden Shorts") — scrolls on the Episodes timeline. Both
+// texts are free; only whether each is available reaches the page, and the
+// text itself is fetched when opened (see /api/short-story-content).
+// ---------------------------------------------------------------------------
+
+export const SHORT_STORY_PARTS = [
+  { key: "synopsis", label: "Synopsis" },
+  { key: "story", label: "Short Story" },
+] as const;
+
+export type ShortStoryPart = (typeof SHORT_STORY_PARTS)[number]["key"];
+
+export interface ShortStory {
+  id: string; // slug
+  title: string;
+  note?: string;
+  available: Record<ShortStoryPart, boolean>;
+}
+
+export async function getShortStories(): Promise<ShortStory[]> {
+  return fetchTagged<ShortStory[]>(
+    `*[_type == "shortStory" && defined(slug.current)] | order(title asc){
+      "id": slug.current,
+      title,
+      note,
+      "available": {
+        "synopsis": synopsis.available == true && defined(synopsis.body),
+        "story": story.available == true && defined(story.body)
+      }
+    }`,
+    TAGS.shortStory
+  );
+}
+
+export async function getShortStoryText(id: string, part: ShortStoryPart): Promise<string | undefined> {
+  type Entry = { available?: boolean; body?: string } | null;
+  const doc = await fetchTagged<Record<ShortStoryPart, Entry> | null>(
+    `*[_type == "shortStory" && slug.current == $id][0]{ synopsis, story }`,
+    TAGS.shortStory,
+    { id }
+  );
+  const entry = doc?.[part];
+  return entry?.available ? entry.body : undefined;
 }
 
 // ---------------------------------------------------------------------------

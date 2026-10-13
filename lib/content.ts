@@ -17,6 +17,8 @@ export type {
   UseOfProceeds,
   UseOfProceedsPhaseWithGoal,
   UseOfProceedsPhaseWithStatus,
+  ShortStory,
+  ShortStoryPart,
 } from "./sanity/queries";
 
 export {
@@ -39,4 +41,7 @@ export {
   getConceptArtPool,
   getArtistArtPool,
   getUseOfProceeds,
+  getShortStories,
+  getShortStoryText,
+  SHORT_STORY_PARTS,
 } from "./sanity/queries";

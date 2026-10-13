@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { getEpisodes, getArtistArtPool } from "@/lib/content";
+import { getEpisodes, getArtistArtPool, getShortStories } from "@/lib/content";
 import { resolveTimeline } from "@/lib/timeline";
 import EpisodeTimeline from "@/components/EpisodeTimeline";
 import PageBackgroundArt from "@/components/PageBackgroundArt";
@@ -13,8 +13,9 @@ export const metadata: Metadata = {
 const BACKGROUND_ARTISTS = ["michael-carelse", "jayden-thomas"];
 
 export default async function EpisodesPage() {
-  const [episodes, ...pools] = await Promise.all([
+  const [episodes, shorts, ...pools] = await Promise.all([
     getEpisodes(),
+    getShortStories(),
     ...BACKGROUND_ARTISTS.map(getArtistArtPool),
   ]);
 
@@ -41,7 +42,7 @@ export default async function EpisodesPage() {
         </p>
       </div>
 
-      <EpisodeTimeline entries={resolveTimeline(episodes)} />
+      <EpisodeTimeline entries={resolveTimeline(episodes, shorts)} />
     </div>
   );
 }

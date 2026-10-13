@@ -175,6 +175,17 @@ body {
   text-align: center;
 }
 
+.short-scroll--open {
+  cursor: pointer;
+  transition: transform 300ms ease, box-shadow 300ms ease;
+}
+
+.short-scroll--open:hover,
+.short-scroll--open:focus-visible {
+  transform: translateY(-4px);
+  box-shadow: 0 12px 20px -10px rgb(31 26 23 / 0.5);
+}
+
 /* An episode as a hardback standing on the timeline. The cover is hinged on
    its spine and swings open on hover to show the first page. */
 .book {
@@ -300,4 +311,89 @@ body {
 .bg-band-fade {
   mask-image: linear-gradient(180deg, transparent 4%, black 30%, black 70%, transparent 96%);
   -webkit-mask-image: linear-gradient(180deg, transparent 4%, black 30%, black 70%, transparent 96%);
+}
+
+/* Screenplay pages (ScreenplayViewer): A4 sheets set in 12pt Courier with
+   1.5in left and 1in top margins. Sizes are fractions of the sheet's width
+   (595pt for A4), so a page keeps its layout at any size. */
+.sp-sheet {
+  container-type: inline-size;
+  /* A whole page in view where the screen allows, but never so small the
+     type drops much under 13px. */
+  width: clamp(min(100%, 40rem), calc((100dvh - 8.5rem) * 210 / 297), min(100%, 54rem));
+}
+
+.sp-page {
+  position: relative;
+  aspect-ratio: 210 / 297;
+  overflow: hidden;
+  background: #fffdf8;
+  color: #111;
+  box-shadow: 0 10px 30px -12px rgb(0 0 0 / 0.6);
+  font-size: calc(100cqw * 12 / 595.28);
+  padding: calc(100cqw * 72 / 595.28) 0 0 calc(100cqw * 108 / 595.28);
+}
+
+.sp-page__number {
+  position: absolute;
+  top: calc(100cqw * 36 / 595.28);
+  right: calc(100cqw * 55 / 595.28);
+}
+
+.sp-page__body {
+  width: 60ch;
+  line-height: 1;
+  white-space: pre;
+}
+
+.sp-line {
+  display: block;
+  min-height: 1em;
+}
+
+.sp-scene {
+  font-weight: 700;
+}
+
+.sp-character {
+  padding-left: 22ch;
+}
+
+.sp-parenthetical {
+  padding-left: 16ch;
+}
+
+.sp-dialogue {
+  padding-left: 10ch;
+}
+
+.sp-transition {
+  text-align: right;
+}
+
+.sp-title {
+  display: flex;
+  height: calc(100cqw * 697 / 595.28);
+  width: 60ch;
+  flex-direction: column;
+  align-items: center;
+  padding-top: 18em;
+  line-height: 1;
+  text-align: center;
+}
+
+.sp-title p {
+  min-height: 1em;
+}
+
+.sp-title__name {
+  margin-bottom: 1em;
+  font-weight: 700;
+  text-transform: uppercase;
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
+}
+
+.sp-title__credit {
+  margin-top: 4em;
 }
