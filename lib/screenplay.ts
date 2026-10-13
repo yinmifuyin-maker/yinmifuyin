@@ -5,8 +5,9 @@
 // The text conventions it reads, as written in Studio so far:
 // - A scene heading starts with INT or EXT ("Ext. Day.", "Int.Teahouse ...").
 //   When action follows on the same line, the heading is split off it.
-// - Dialogue is "Name: line". A "Name:" on its own takes the indented,
-//   quoted or bracketed lines under it as its speech.
+// - Dialogue is "Name: line", or a name in capitals on its own line with the
+//   speech under it. A cue on its own takes the next line as speech, then
+//   any indented, quoted or bracketed lines after that.
 // - A "Written by" line in the opening lines makes that opening a title page.
 // - Everything else is action.
 //
@@ -135,45 +136,62 @@ function isSpeechLine(raw: string): boolean {
   return /^\s/.test(raw) || /^[(（“"「]/.test(t);
 }
 
+// A cue on its own line in capitals ("GOGO", "GIRL 2 (CONT’D)"), as in a
+// typed screenplay.
+const CAPS_CUE = /^(?=(?:.*[A-Z]){2})[A-Z0-9][A-Z0-9 .'’()\-#]*$/;
+
 function parseBody(lines: string[]): Element[] {
   const out: Element[] = [];
-  let speaking = false; // under a bare "Name:" cue
+  // After a cue with no speech on its line: "first" takes the next line as
+  // speech whatever its shape; "more" takes only indented, quoted or
+  // bracketed lines after that.
+  let speaking: "no" | "first" | "more" = "no";
 
-  for (const raw of lines) {
+  const nextLine = (i: number) => lines.slice(i + 1).find((l) => l.trim())?.trim() ?? "";
+
+  lines.forEach((raw, i) => {
     const line = raw.trim();
     if (!line) {
-      speaking = false;
-      continue;
+      speaking = "no";
+      return;
     }
 
-    if (speaking && isSpeechLine(raw)) {
+    if (speaking === "first" || (speaking === "more" && isSpeechLine(raw))) {
       out.push({ type: /^[(（].*[)）]$/.test(line) ? "parenthetical" : "dialogue", text: line });
-      continue;
+      speaking = "more";
+      return;
     }
-    speaking = false;
+    speaking = "no";
 
     if (SCENE_START.test(line)) {
       const { heading, rest } = splitSceneLine(line);
       if (heading) out.push({ type: "scene", text: heading });
       if (rest) out.push({ type: "action", text: rest });
-      continue;
+      return;
     }
 
     if (TRANSITION.test(line)) {
       out.push({ type: "transition", text: line });
-      continue;
+      return;
     }
 
     const cue = line.match(CUE_LINE);
     if (cue && cue[1].length <= 30) {
       out.push({ type: "character", text: cue[1] });
       if (cue[2].trim()) out.push({ type: "dialogue", text: cue[2].trim() });
-      else speaking = true;
-      continue;
+      else speaking = "first";
+      return;
+    }
+
+    const next = nextLine(i);
+    if (CAPS_CUE.test(line) && line.length <= 38 && next && !SCENE_START.test(next)) {
+      out.push({ type: "character", text: line });
+      speaking = "first";
+      return;
     }
 
     out.push({ type: "action", text: line });
-  }
+  });
   return out;
 }
 
