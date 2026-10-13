@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Ma_Shan_Zheng, Cormorant_Garamond, Mulish, Noto_Serif_SC } from "next/font/google";
 import Nav from "@/components/Nav";
 import Footer from "@/components/Footer";
+import HumanMadeNote from "@/components/HumanMadeNote";
 import { getLocale } from "@/lib/locale";
 import { getSeries } from "@/lib/content";
 import "./globals.css";
@@ -58,7 +59,10 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
 
         <div className="flex min-h-full flex-1 flex-col pt-2.5 pb-2.5 sm:pt-3 sm:pb-3">
           <Nav locale={locale} />
-          <main className="flex-1">{children}</main>
+          <main className="relative flex-1">
+            <HumanMadeNote />
+            {children}
+          </main>
           <Footer series={series} locale={locale} />
         </div>
       </body>

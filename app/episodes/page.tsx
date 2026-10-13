@@ -8,24 +8,19 @@ export const metadata: Metadata = {
   title: "Episodes · The Hidden Gospel",
 };
 
-// Michael Carelse's and Jayden Thomas's character art take turns, faded,
-// behind the timeline.
-const BACKGROUND_ARTISTS = ["michael-carelse", "jayden-thomas"];
+// Michael Carelse's character art sits faded behind the timeline.
+const BACKGROUND_ARTIST = "michael-carelse";
 
 export default async function EpisodesPage() {
-  const [episodes, shorts, ...pools] = await Promise.all([
+  const [episodes, shorts, art] = await Promise.all([
     getEpisodes(),
     getShortStories(),
-    ...BACKGROUND_ARTISTS.map(getArtistArtPool),
+    getArtistArtPool(BACKGROUND_ARTIST),
   ]);
 
   return (
     <div className="relative isolate py-16">
-      <PageBackgroundArt pools={pools} />
-
-      <p className="absolute left-4 top-4 rounded-full border border-gold bg-parchment/85 px-3 py-1 text-[0.65rem] font-bold uppercase tracking-[0.18em] text-vermilion sm:left-6">
-        All art is human made
-      </p>
+      <PageBackgroundArt images={art} />
 
       <div className="mx-auto max-w-6xl px-6">
         <p className="kicker">The timeline</p>
