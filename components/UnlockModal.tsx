@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import {
   minAmountFor,
   presetsFor,
@@ -98,7 +99,9 @@ export default function UnlockModal({
     }
   }
 
-  return (
+  // Portalled to <body> so the dialog sits above the nav and footer, which
+  // are lifted over each page's background art.
+  return createPortal(
     <div
       role="dialog"
       aria-modal="true"
@@ -226,6 +229,7 @@ export default function UnlockModal({
           </p>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

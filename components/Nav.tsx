@@ -28,11 +28,11 @@ export default function Nav({ locale }: { locale: Locale }) {
     href === "/" ? pathname === "/" : pathname.startsWith(href);
 
   return (
-    <header className="hairline border-b bg-parchment/95 backdrop-blur-sm">
+    <header className="hairline relative z-20 border-b bg-parchment/95 backdrop-blur-sm">
       {/* Ten tabs plus the language toggle and donate button no longer fit on
           one line, so from lg up the tabs get their own centred row. */}
       <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-x-4 px-6 py-4 lg:pb-0">
-        <Link href="/" className="whitespace-nowrap font-[family-name:var(--font-calligraphy)] text-2xl">
+        <Link href="/" className="whitespace-nowrap font-[family-name:var(--font-calligraphy)] text-2xl text-vermilion">
           隐秘福音
         </Link>
 
@@ -50,7 +50,7 @@ export default function Nav({ locale }: { locale: Locale }) {
               key={tab.href}
               href={tab.href}
               className={`whitespace-nowrap py-1 text-sm tracking-wide ${
-                isActive(tab.href) ? "hand-underline font-medium" : "opacity-80 hover:opacity-100"
+                isActive(tab.href) ? "hand-underline font-semibold text-vermilion" : "opacity-80 hover:text-vermilion hover:opacity-100"
               }`}
               aria-current={isActive(tab.href) ? "page" : undefined}
             >
@@ -79,7 +79,7 @@ export default function Nav({ locale }: { locale: Locale }) {
                   href={tab.href}
                   onClick={() => setOpen(false)}
                   className={`text-sm tracking-wide ${
-                    isActive(tab.href) ? "hand-underline font-medium" : "opacity-80"
+                    isActive(tab.href) ? "hand-underline font-semibold text-vermilion" : "opacity-80"
                   }`}
                   aria-current={isActive(tab.href) ? "page" : undefined}
                 >

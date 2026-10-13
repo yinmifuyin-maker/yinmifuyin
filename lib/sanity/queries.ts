@@ -266,6 +266,8 @@ export interface Episode {
   title: string;
   teaser?: string;
   coverImageUrl: string;
+  // False while coverImageUrl is only the labelled placeholder.
+  hasCoverImage: boolean;
   priceId?: string;
   content: EpisodeContent;
 }
@@ -306,6 +308,7 @@ function resolveEpisode(raw: RawEpisode): Episode {
     coverImageUrl: raw.coverImage?.asset
       ? urlFor(raw.coverImage).width(800).height(500).fit("crop").url()
       : placeholderCover(raw.title),
+    hasCoverImage: Boolean(raw.coverImage?.asset),
     priceId: raw.priceId,
     content: raw.content,
   };
@@ -471,6 +474,28 @@ export async function getConceptArtPool(): Promise<ConceptArtImage[]> {
     if (!ref || seen.has(ref)) continue;
     seen.add(ref);
     pool.push({ url: urlFor(image).width(600).height(900).fit("crop").auto("format").url() });
+  }
+  return pool;
+}
+
+/**
+ * One artist's character art, for faded page backdrops (the Episodes page uses
+ * Michael Carelse's). Deduped by asset, in a stable order so server renders match.
+ */
+export async function getArtistArtPool(artistId: string): Promise<ConceptArtImage[]> {
+  const images = await fetchTagged<RawArtworkImage[]>(
+    `*[_type == "character"] | order(_id asc).artworks[artist->slug.current == $artistId].image`,
+    [...TAGS.character, ...TAGS.artist],
+    { artistId }
+  );
+
+  const seen = new Set<string>();
+  const pool: ConceptArtImage[] = [];
+  for (const image of images) {
+    const ref = image?.asset?._ref;
+    if (!ref || seen.has(ref)) continue;
+    seen.add(ref);
+    pool.push({ url: urlFor(image).width(700).auto("format").quality(70).url() });
   }
   return pool;
 }

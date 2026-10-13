@@ -19,7 +19,7 @@ export default async function Home() {
   const synopsis = series ? pick(locale, series.synopsisEn, series.synopsisZh) : undefined;
 
   return (
-    <div className="relative">
+    <div className="relative isolate">
       {/* Below xl there is no gutter beside the text for full figures, so the
           faint concept-art backdrop stays; from xl up the rotating figures take
           its place (it falls back to the backdrop until figures exist in Sanity). */}
@@ -38,7 +38,7 @@ export default async function Home() {
 
       {storyboard && (
         <section className="relative mx-auto max-w-3xl px-6 pb-16 pt-4">
-          <p className="text-center text-xs uppercase tracking-widest opacity-60">
+          <p className="kicker text-center">
             Storyboard · Episode {storyboard.episodeNumber}
           </p>
           <h2 className="mt-1 text-center font-[family-name:var(--font-serif-display)] text-2xl">
@@ -94,7 +94,7 @@ export default async function Home() {
           <Link
             key={item.href}
             href={item.href}
-            className="hairline flex items-center justify-center border bg-parchment/70 p-6 text-center text-sm tracking-wide backdrop-blur-sm transition-colors hover:bg-white/40 focus-visible:outline-2 focus-visible:outline-ink"
+            className="flex items-center justify-center border-t-2 border-jade bg-paper-2/80 p-6 text-center font-[family-name:var(--font-serif-display)] text-lg font-semibold tracking-wide backdrop-blur-sm transition-colors hover:border-vermilion hover:text-vermilion focus-visible:outline-2 focus-visible:outline-ink"
           >
             {item.label}
           </Link>

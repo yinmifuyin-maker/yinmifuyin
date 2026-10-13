@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
+import { createPortal } from "react-dom";
 import type { Episode } from "@/lib/content";
 import EpisodeCategoryPanel from "./EpisodeCategoryPanel";
 
@@ -19,7 +20,9 @@ export default function EpisodeOverlay({
     return () => document.removeEventListener("keydown", handleKey);
   }, [onClose]);
 
-  return (
+  // Portalled to <body> so the dialog sits above the nav and footer, which
+  // are lifted over each page's background art.
+  return createPortal(
     <div
       role="dialog"
       aria-modal="true"
@@ -33,13 +36,13 @@ export default function EpisodeOverlay({
         className="absolute inset-0 bg-ink/50"
       />
 
-      <div className="hairline relative max-h-[85vh] w-full max-w-xl overflow-y-auto border bg-parchment p-6 shadow-xl">
+      <div className="gold-frame relative max-h-[85vh] w-full max-w-xl overflow-y-auto border-t-4 border-t-vermilion bg-parchment p-7 shadow-xl">
         <div className="flex items-start justify-between gap-4">
           <div>
-            <p className="text-xs uppercase tracking-widest opacity-60">
+            <p className="kicker">
               Episode {episode.number}
             </p>
-            <h2 className="font-[family-name:var(--font-serif-display)] text-2xl">
+            <h2 className="mt-1 font-[family-name:var(--font-serif-display)] text-3xl font-semibold">
               {episode.title}
             </h2>
           </div>
@@ -57,6 +60,7 @@ export default function EpisodeOverlay({
           <EpisodeCategoryPanel episode={episode} />
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

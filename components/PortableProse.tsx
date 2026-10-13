@@ -4,7 +4,7 @@ import type { PortableTextBlock } from "@/lib/sanity/queries";
 const components: PortableTextComponents = {
   block: {
     normal: ({ children }) => (
-      <p className="font-[family-name:var(--font-serif-display)] text-base leading-relaxed text-ink sm:text-lg">
+      <p className="font-[family-name:var(--font-serif-display)] text-base leading-relaxed text-inherit sm:text-lg">
         {children}
       </p>
     ),
