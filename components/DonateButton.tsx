@@ -11,7 +11,7 @@ export default function DonateButton({ className = "" }: { className?: string })
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className={`inline-flex items-center justify-center rounded-full border-2 border-brass px-5 py-2 text-sm font-medium tracking-wide text-ink transition-colors hover:bg-brass/10 ${className}`}
+        className={`inline-flex items-center justify-center rounded-full border-2 border-gold bg-vermilion px-5 py-2 text-sm font-semibold tracking-wide text-parchment shadow-sm transition-colors hover:bg-[#7d0106] ${className}`}
       >
         Support the Project
       </button>

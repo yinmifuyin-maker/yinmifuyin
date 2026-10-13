@@ -37,5 +37,6 @@ export {
   episodeHasAvailableContent,
   getTeamMembers,
   getConceptArtPool,
+  getArtistArtPool,
   getUseOfProceeds,
 } from "./sanity/queries";

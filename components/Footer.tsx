@@ -8,9 +8,10 @@ import PortableProse from "./PortableProse";
 
 export default function Footer({ series, locale }: { series: Series | undefined; locale: Locale }) {
   return (
-    <footer className="hairline mt-16 border-t px-6 py-10">
+    <footer className="relative z-20 mt-16 border-t-4 border-double border-gold bg-ink px-6 py-10 text-parchment">
       <div className="mx-auto flex max-w-6xl flex-col items-center gap-4 text-center">
-        <p className="font-[family-name:var(--font-calligraphy)] text-xl">隐秘福音</p>
+        <p className="font-[family-name:var(--font-calligraphy)] text-2xl text-gold">隐秘福音</p>
+        <div aria-hidden className="gold-rule" />
         {series?.openingQuote && (
           <PortableProse
             value={pick(locale, series.openingQuote, undefined)}
@@ -25,9 +26,9 @@ export default function Footer({ series, locale }: { series: Series | undefined;
             alt="Instagram QR code for @yinmifuyin_"
             width={64}
             height={64}
-            className="opacity-80"
+            className="rounded-sm bg-parchment p-1"
           />
-          <p className="text-[11px] uppercase tracking-widest opacity-50">Follow us</p>
+          <p className="text-[11px] uppercase tracking-widest text-gold-soft">Follow us</p>
         </div>
 
         <p className="text-xs opacity-70">
