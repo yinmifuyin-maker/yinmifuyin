@@ -2,15 +2,19 @@
 
 import { useEffect } from "react";
 import { createPortal } from "react-dom";
-import type { Episode } from "@/lib/content";
-import EpisodeCategoryPanel from "./EpisodeCategoryPanel";
+import type { ReactNode } from "react";
 
+// The dialog an episode book or short story scroll opens on the timeline.
 export default function EpisodeOverlay({
-  episode,
+  kicker,
+  title,
   onClose,
+  children,
 }: {
-  episode: Episode;
+  kicker: string;
+  title: string;
   onClose: () => void;
+  children: ReactNode;
 }) {
   useEffect(() => {
     function handleKey(e: KeyboardEvent) {
@@ -26,7 +30,7 @@ export default function EpisodeOverlay({
     <div
       role="dialog"
       aria-modal="true"
-      aria-label={`${episode.title} content`}
+      aria-label={`${title} content`}
       className="fixed inset-0 z-50 flex items-center justify-center p-4"
     >
       <button
@@ -39,11 +43,9 @@ export default function EpisodeOverlay({
       <div className="gold-frame relative max-h-[85vh] w-full max-w-xl overflow-y-auto border-t-4 border-t-vermilion bg-parchment p-7 shadow-xl">
         <div className="flex items-start justify-between gap-4">
           <div>
-            <p className="kicker">
-              Episode {episode.number}
-            </p>
+            <p className="kicker">{kicker}</p>
             <h2 className="mt-1 font-[family-name:var(--font-serif-display)] text-3xl font-semibold">
-              {episode.title}
+              {title}
             </h2>
           </div>
           <button
@@ -57,7 +59,7 @@ export default function EpisodeOverlay({
         </div>
 
         <div className="mt-6">
-          <EpisodeCategoryPanel episode={episode} />
+          {children}
         </div>
       </div>
     </div>,

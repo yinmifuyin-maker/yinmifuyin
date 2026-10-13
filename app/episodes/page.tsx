@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { getEpisodes, getArtistArtPool } from "@/lib/content";
+import { getEpisodes, getArtistArtPool, getShortStories } from "@/lib/content";
 import { resolveTimeline } from "@/lib/timeline";
 import EpisodeTimeline from "@/components/EpisodeTimeline";
 import PageBackgroundArt from "@/components/PageBackgroundArt";
@@ -12,8 +12,9 @@ export const metadata: Metadata = {
 const BACKGROUND_ARTIST = "michael-carelse";
 
 export default async function EpisodesPage() {
-  const [episodes, art] = await Promise.all([
+  const [episodes, shorts, art] = await Promise.all([
     getEpisodes(),
+    getShortStories(),
     getArtistArtPool(BACKGROUND_ARTIST),
   ]);
 
@@ -36,7 +37,7 @@ export default async function EpisodesPage() {
         </p>
       </div>
 
-      <EpisodeTimeline entries={resolveTimeline(episodes)} />
+      <EpisodeTimeline entries={resolveTimeline(episodes, shorts)} />
     </div>
   );
 }

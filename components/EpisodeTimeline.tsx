@@ -1,10 +1,14 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import type { Episode } from "@/lib/content";
+import type { Episode, ShortStory } from "@/lib/content";
 import type { ResolvedTimelineEntry } from "@/lib/timeline";
 import EpisodeBook from "./EpisodeBook";
 import EpisodeOverlay from "./EpisodeOverlay";
+import EpisodeCategoryPanel from "./EpisodeCategoryPanel";
+import ShortStoryPanel from "./ShortStoryPanel";
+
+type Opened = { kind: "episode"; episode: Episode } | { kind: "short"; story: ShortStory };
 
 // Every column shares these row heights so the books stand on one shelf line
 // and the dates hang beneath it.
@@ -16,7 +20,7 @@ function Column({
   onOpen,
 }: {
   entry: ResolvedTimelineEntry;
-  onOpen: (episode: Episode) => void;
+  onOpen: (opened: Opened) => void;
 }) {
   if (entry.kind === "marker") {
     return (
@@ -38,17 +42,36 @@ function Column({
   }
 
   if (entry.kind === "short") {
+    const story = entry.story;
+    const readable = story && (story.available.synopsis || story.available.story);
+    const slip = (
+      <>
+        <p className="text-[0.62rem] font-bold uppercase tracking-[0.22em] text-jade">
+          Short story
+        </p>
+        <p className="mt-2 font-[family-name:var(--font-serif-display)] text-xl font-semibold leading-tight">
+          {entry.title}
+        </p>
+        <p className="mt-2 text-[0.6rem] font-bold uppercase tracking-[0.18em] text-vermilion">
+          {readable ? <>Read &rsaquo;</> : "Coming soon"}
+        </p>
+      </>
+    );
     return (
       <li className="flex w-44 shrink-0 snap-start flex-col items-center">
         <div className={`${UPPER} flex items-end justify-center pb-1`}>
-          <div className="short-scroll">
-            <p className="text-[0.62rem] font-bold uppercase tracking-[0.22em] text-jade">
-              Short story
-            </p>
-            <p className="mt-2 font-[family-name:var(--font-serif-display)] text-xl font-semibold leading-tight">
-              {entry.title}
-            </p>
-          </div>
+          {readable ? (
+            <button
+              type="button"
+              onClick={() => onOpen({ kind: "short", story })}
+              aria-label={`Read the short story ${entry.title}`}
+              className="short-scroll short-scroll--open"
+            >
+              {slip}
+            </button>
+          ) : (
+            <div className="short-scroll">{slip}</div>
+          )}
         </div>
         <div className={`${NODE} flex items-center justify-center`}>
           <span aria-hidden className="h-3 w-3 rounded-full border-2 border-jade bg-parchment" />
@@ -61,7 +84,11 @@ function Column({
   return (
     <li className="flex w-52 shrink-0 snap-start flex-col items-center">
       <div className={`${UPPER} flex items-end justify-center pb-1`}>
-        <EpisodeBook number={entry.number} episode={entry.episode} onOpen={onOpen} />
+        <EpisodeBook
+          number={entry.number}
+          episode={entry.episode}
+          onOpen={(episode) => onOpen({ kind: "episode", episode })}
+        />
       </div>
       <div className={`${NODE} flex items-center justify-center`}>
         <span aria-hidden className="h-3.5 w-3.5 rounded-full border-2 border-gold bg-ink" />
@@ -76,7 +103,7 @@ function Column({
 }
 
 export default function EpisodeTimeline({ entries }: { entries: ResolvedTimelineEntry[] }) {
-  const [openEpisode, setOpenEpisode] = useState<Episode | null>(null);
+  const [opened, setOpened] = useState<Opened | null>(null);
   const scroller = useRef<HTMLDivElement>(null);
   const [edges, setEdges] = useState({ start: true, end: false });
 
@@ -116,7 +143,7 @@ export default function EpisodeTimeline({ entries }: { entries: ResolvedTimeline
             className="timeline-rule pointer-events-none absolute inset-x-0 top-[calc(19rem+1rem)] -translate-y-1/2"
           />
           {entries.map((entry, i) => (
-            <Column key={i} entry={entry} onOpen={setOpenEpisode} />
+            <Column key={i} entry={entry} onOpen={setOpened} />
           ))}
         </ol>
       </div>
@@ -136,8 +163,19 @@ export default function EpisodeTimeline({ entries }: { entries: ResolvedTimeline
         </button>
       ))}
 
-      {openEpisode && (
-        <EpisodeOverlay episode={openEpisode} onClose={() => setOpenEpisode(null)} />
+      {opened?.kind === "episode" && (
+        <EpisodeOverlay
+          kicker={`Episode ${opened.episode.number}`}
+          title={opened.episode.title}
+          onClose={() => setOpened(null)}
+        >
+          <EpisodeCategoryPanel episode={opened.episode} />
+        </EpisodeOverlay>
+      )}
+      {opened?.kind === "short" && (
+        <EpisodeOverlay kicker="Short story" title={opened.story.title} onClose={() => setOpened(null)}>
+          <ShortStoryPanel story={opened.story} />
+        </EpisodeOverlay>
       )}
     </div>
   );
